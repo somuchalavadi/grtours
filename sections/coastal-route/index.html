@@ -59,11 +59,16 @@ button{font:inherit;color:inherit;cursor:pointer}
 .card.show li{animation:li .45s cubic-bezier(.2,.8,.2,1) both}
 .card.show li:nth-child(2){animation-delay:.06s}.card.show li:nth-child(3){animation-delay:.12s}
 @keyframes li{from{opacity:0;transform:translateX(10px)}}
-.card .go{display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:.72rem;font-weight:600;color:#fff;text-decoration:none;padding:5px 12px 5px 5px;border-radius:999px;
-  background:linear-gradient(180deg,rgba(40,70,128,.8),rgba(10,30,70,.92));box-shadow:inset 0 1px 1px rgba(255,255,255,.55),inset 0 -3px 6px rgba(0,0,0,.3),0 10px 22px -12px rgba(10,30,70,.6);transition:transform .25s}
-.card .go:hover{transform:translateY(-1px)}
-.card .go span{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 28%,#7BE3A6,#22B262 55%,#13814A)}
-.card .go svg{width:11px;height:11px}
+/* "Must visit" highlight: soft gold glass row under the list */
+.card .best{display:flex;align-items:center;gap:9px;margin-top:9px;padding:6px 10px 6px 7px;border-radius:12px;
+  background:linear-gradient(180deg,rgba(255,246,214,.9),rgba(253,229,160,.5));
+  box-shadow:inset 0 0 0 1px rgba(214,164,38,.42),inset 0 1px 1px rgba(255,255,255,.95),0 8px 18px -10px rgba(154,106,5,.4)}
+.card .best .star{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 35% 28%,#FFF1B8,#F5C02E 50%,#B98207);box-shadow:inset 0 1px 1px rgba(255,255,255,.85),inset 0 -2px 3px rgba(120,80,0,.3),0 3px 7px -2px rgba(154,106,5,.55)}
+.card .best .star svg{width:12px;height:12px;filter:drop-shadow(0 1px 0 rgba(120,80,0,.35))}
+.card .best .k{display:block;font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9A6A05;line-height:1.2}
+.card .best b{display:block;font-size:.82rem;font-weight:700;color:#0B1F44;line-height:1.25;letter-spacing:-.01em}
+.card.show .best{animation:li .45s cubic-bezier(.2,.8,.2,1) .2s both}
 
 /* place image (right, blended, no frame) */
 .place{position:absolute;right:3%;bottom:22%;z-index:3;width:min(38%,470px);aspect-ratio:1/1;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
@@ -173,7 +178,7 @@ svg.route{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:vi
       <article class="card" id="card" aria-live="polite">
         <div class="t"><div><h3 id="cName"></h3><p class="tag" id="cTag"></p></div><span class="kn" id="cKn" lang="kn"></span></div>
         <ul id="cList"></ul>
-        <a class="go" id="cGo" href="https://wa.me/919620936143" target="_blank" rel="noopener"><span><svg><use href="#i-wa"/></svg></span>Plan this trip</a>
+        <div class="best"><span class="star" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9z"/></svg></span><span><span class="k">Must visit</span><b id="cBest"></b></span></div>
       </article>
 
       <div class="driver" id="driver" aria-hidden="true"><span class="say">Namaskara! Shall we go?</span><img src="img/driver.webp" alt=""></div>
@@ -191,20 +196,20 @@ svg.route{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:vi
 (function(){
   var WA = '919620936143';
   var STOPS = [
-    {n:'Mangaluru', kn:'ಮಂಗಳೂರು', tag:'Airport city', img:'img/mangaluru.webp', li:['Mangaluru Airport pickups and drops','Panambur and Tannirbhavi beaches','Kadri Manjunatha temple']},
-    {n:'Udupi', kn:'ಉಡುಪಿ', tag:'Temple town', img:'img/udupi.webp', li:['Sri Krishna Matha and the car street','Malpe beach and St Mary’s Island','Kaup lighthouse on the rocks']},
-    {n:'Kundapura', kn:'ಕುಂದಾಪುರ', tag:'Sea meets river', img:'img/kundapura.webp', li:['Maravanthe: sea on one side, river on the other','Gateway to Kollur Mookambika temple']},
-    {n:'Murdeshwar', kn:'ಮುರುಡೇಶ್ವರ', tag:'Our home base', img:'img/murdeshwar.webp', li:['Giant seated Shiva statue','Raja Gopura tower with a lift to the top','Boat trips to Netrani Island']},
-    {n:'Honnavar', kn:'ಹೊನ್ನಾವರ', tag:'River & backwaters', img:'img/honnavar.webp', li:['Sharavathi backwater boat rides','The road inland to Jog Falls','Kasarkod Eco Beach']},
-    {n:'Kumta', kn:'ಕುಮಟಾ', tag:'Forts & forests', img:'img/kumta.webp', li:['Mirjan Fort by the Aghanashini river','The giant black rocks of Yana']},
-    {n:'Gokarna', kn:'ಗೋಕರ್ಣ', tag:'Temple & beaches', img:'img/gokarna.webp', li:['Mahabaleshwar temple','Om, Kudle and Half Moon beaches']},
-    {n:'Sirsi', kn:'ಶಿರಸಿ', tag:'Temples & falls', img:'img/sirsi.webp', li:['Sri Marikamba temple','Sahasralinga in the Shalmala river','Unchalli Falls nearby']}
+    {n:'Mangaluru', kn:'ಮಂಗಳೂರು', tag:'Airport city', img:'img/mangaluru.webp', best:'Panambur Beach', li:['Mangaluru Airport pickups and drops','Kadri Manjunatha temple','Kudroli Gokarnanatha temple']},
+    {n:'Udupi', kn:'ಉಡುಪಿ', tag:'Temple town', img:'img/udupi.webp', best:'Sri Krishna Matha', li:['The temple car street','Malpe beach and St Mary’s Island','Kaup lighthouse on the rocks']},
+    {n:'Kundapura', kn:'ಕುಂದಾಪುರ', tag:'Sea meets river', img:'img/kundapura.webp', best:'Maravanthe Beach', li:['Highway between the sea and the river','Gateway to Kollur Mookambika temple']},
+    {n:'Murdeshwar', kn:'ಮುರುಡೇಶ್ವರ', tag:'Our home base', img:'img/murdeshwar.webp', best:'Shiva statue & Raja Gopura', li:['Lift to the top of the gopura','Boat trips to Netrani Island','Murdeshwar beach at sunset']},
+    {n:'Honnavar', kn:'ಹೊನ್ನಾವರ', tag:'River & backwaters', img:'img/honnavar.webp', best:'Sharavathi backwater boat ride', li:['The road inland to Jog Falls','Kasarkod Eco Beach']},
+    {n:'Kumta', kn:'ಕುಮಟಾ', tag:'Forts & forests', img:'img/kumta.webp', best:'Mirjan Fort', li:['The giant black rocks of Yana','Aghanashini river views']},
+    {n:'Gokarna', kn:'ಗೋಕರ್ಣ', tag:'Temple & beaches', img:'img/gokarna.webp', best:'Om Beach', li:['Mahabaleshwar temple','Kudle and Half Moon beaches']},
+    {n:'Sirsi', kn:'ಶಿರಸಿ', tag:'Temples & falls', img:'img/sirsi.webp', best:'Sri Marikamba Temple', li:['Sahasralinga in the Shalmala river','Unchalli Falls nearby']}
   ];
   var N = STOPS.length;
   var section = document.getElementById('journey'), panel = document.getElementById('panel');
   var svg = document.getElementById('route'), track = document.getElementById('track'), pBase = document.getElementById('pBase'), pDone = document.getElementById('pDone'), dotsG = document.getElementById('dots');
   var van = document.getElementById('van'), place = document.getElementById('place'), card = document.getElementById('card');
-  var cName = document.getElementById('cName'), cKn = document.getElementById('cKn'), cTag = document.getElementById('cTag'), cList = document.getElementById('cList'), cGo = document.getElementById('cGo');
+  var cName = document.getElementById('cName'), cKn = document.getElementById('cKn'), cTag = document.getElementById('cTag'), cList = document.getElementById('cList'), cBest = document.getElementById('cBest');
   var hint = document.getElementById('hint');
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var NS = 'http://www.w3.org/2000/svg';
@@ -268,9 +273,9 @@ svg.route{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:vi
     probe.removeAttribute('id'); probe.querySelectorAll('[id]').forEach(function(n){ n.removeAttribute('id'); });
     probe.className = 'card show'; probe.style.visibility = 'hidden'; probe.style.transition = 'none'; probe.setAttribute('aria-hidden', 'true');
     panel.appendChild(probe);
-    var h3 = probe.querySelector('h3'), kn = probe.querySelector('.kn'), tg = probe.querySelector('.tag'), ul = probe.querySelector('ul');
+    var h3 = probe.querySelector('h3'), kn = probe.querySelector('.kn'), tg = probe.querySelector('.tag'), ul = probe.querySelector('ul'), bs = probe.querySelector('.best b');
     STOPS.forEach(function(st){
-      h3.textContent = st.n; kn.textContent = st.kn; tg.textContent = st.tag; ul.innerHTML = '';
+      h3.textContent = st.n; kn.textContent = st.kn; tg.textContent = st.tag; bs.textContent = st.best; ul.innerHTML = '';
       st.li.forEach(function(t){ var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
       max = Math.max(max, probe.offsetHeight);
     });
@@ -335,7 +340,7 @@ svg.route{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:vi
     var s = STOPS[k];
     cName.textContent = s.n; cKn.textContent = s.kn; cTag.textContent = s.tag;
     cList.innerHTML = ''; s.li.forEach(function(t){ var li = document.createElement('li'); li.textContent = t; cList.appendChild(li); });
-    cGo.href = 'https://wa.me/' + WA + '?text=' + encodeURIComponent('Hi GR Tours & Travels, I want to plan a trip to ' + s.n + '. Please share the fare.');
+    cBest.textContent = s.best;
     card.classList.remove('show'); void card.offsetWidth; card.classList.add('show');
   }
 
