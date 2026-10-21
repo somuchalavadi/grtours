@@ -1,0 +1,98 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<meta charset="utf-8">
+<title>GR Hero</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+<style>
+/* Layout: the train-window image fills the first screen. Glass top bar (logo · pill nav · Book Now),
+   then the headline block in the sky of the big window, and a glass WhatsApp bar over the paddy fields. One look by design. */
+:root{
+  --ink:#0B1F44; --ink-2:#334155; --red:#D52A33; --wa:#1FA35A; --shadow:rgba(14,42,92,.25);
+  --f:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#1d2a33;font-family:var(--f);-webkit-font-smoothing:antialiased;color:var(--ink)}
+h1,p{margin:0}
+a{color:inherit}
+:focus-visible{outline:2px solid #F5B31B;outline-offset:3px;border-radius:12px}
+
+.hero{position:relative;height:100svh;min-height:560px;max-height:1000px;overflow:hidden;isolation:isolate}
+.hero picture,.hero .bg{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.hero .bg{object-fit:cover;object-position:50% 50%;animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{to{transform:scale(1.05)}}
+
+/* glass recipe */
+.lg{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(220,235,250,.18) 55%,rgba(255,255,255,.28));-webkit-backdrop-filter:blur(14px) saturate(1.8);backdrop-filter:blur(14px) saturate(1.8);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.9),inset 0 -2px 4px rgba(14,42,92,.08),0 12px 30px -14px var(--shadow)}
+.lg::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:linear-gradient(140deg,#fff 0%,rgba(255,255,255,.3) 30%,rgba(14,42,92,.18) 62%,rgba(255,255,255,.9) 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+
+.bar{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding-top:calc(20px + env(safe-area-inset-top,0px));padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.35)}
+.logo .gr{font-weight:900;font-style:italic;font-size:1.7rem;letter-spacing:-.05em;line-height:1}
+.logo .gr i{font-style:inherit;color:#FF5A62}
+.logo .nm{font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
+nav.pill{display:flex;gap:4px;padding:6px;border-radius:999px}
+nav.pill a{padding:9px 18px;border-radius:999px;font-size:.95rem;font-weight:500;color:#fff;text-decoration:none;text-shadow:0 1px 6px rgba(0,0,0,.25);transition:background .2s}
+nav.pill a:hover{background:rgba(255,255,255,.22)}
+.book{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:999px;font-weight:600;font-size:.95rem;text-decoration:none;color:var(--ink);
+  background:linear-gradient(180deg,#fff,rgba(240,247,255,.88));box-shadow:inset 0 1px 1px #fff,0 12px 26px -12px rgba(0,0,0,.4);transition:transform .2s}
+.book:hover{transform:translateY(-1px)}
+
+.content{position:absolute;left:50%;top:22%;transform:translateX(-50%);width:min(760px,calc(100% - 40px));display:grid;justify-items:center;gap:16px;text-align:center;z-index:2}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:999px;font-size:.9rem;font-weight:500;color:var(--ink)}
+.badge i{width:6px;height:6px;border-radius:50%;background:var(--red)}
+.content h1{font-size:clamp(2.6rem,6.4vw,5.2rem);font-weight:700;letter-spacing:-.04em;line-height:1;color:var(--ink);text-shadow:0 2px 24px rgba(255,255,255,.5)}
+.content p{font-size:clamp(1.05rem,2vw,1.5rem);font-weight:500;color:var(--ink)}
+
+.ask{position:absolute;left:50%;bottom:24%;transform:translateX(-50%);z-index:2;width:min(580px,calc(100% - 40px));display:flex;align-items:center;gap:10px;padding:8px 8px 8px 22px;border-radius:999px}
+.ask span{flex:1;font-size:.95rem;font-weight:500;color:var(--ink);text-shadow:0 1px 8px rgba(255,255,255,.6)}
+.ask a{display:inline-flex;align-items:center;gap:9px;padding:10px 20px 10px 10px;border-radius:999px;text-decoration:none;font-weight:600;font-size:.95rem;color:#fff;
+  background:linear-gradient(180deg,rgba(40,70,128,.85),rgba(10,30,70,.95));box-shadow:inset 0 1px 1px rgba(255,255,255,.55),inset 0 -3px 6px rgba(0,0,0,.3),0 12px 24px -12px rgba(10,30,70,.6);white-space:nowrap;transition:transform .2s}
+.ask a:hover{transform:translateY(-1px)}
+.ask a b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 28%,#7BE3A6,#22B262 55%,#13814A)}
+.ask svg{width:15px;height:15px}
+
+@media (max-width:900px){nav.pill{display:none}}
+@media (max-width:620px){
+  .logo .nm{font-size:.9rem}
+  .book{padding:9px 16px;font-size:.85rem}
+  .hero .bg{object-position:30% 50%}
+  .content{top:20%;gap:12px}
+  .ask{bottom:18%;flex-direction:column;align-items:stretch;padding:12px;border-radius:24px;text-align:center}
+  .ask a{justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){.hero .bg{animation:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.2-.2-.5-.3Z"/></symbol>
+</defs></svg>
+
+<header class="hero" id="top">
+  <picture>
+    <source media="(max-width:620px)" srcset="img/hero-phone.webp">
+    <img class="bg" src="img/hero.webp" alt="View from a train window over paddy fields and the sea, with the Murdeshwar statue and temple tower on the horizon">
+  </picture>
+  <div class="bar">
+    <a class="logo" href="#top"><span class="gr">G<i>R</i></span><span class="nm">Tours &amp; Travels</span></a>
+    <nav class="pill lg" aria-label="Main">
+      <a href="#route">Coastal route</a><a href="#services">Services</a><a href="#plans">Tour plans</a><a href="#vehicles">Vehicles</a><a href="#contact">Contact</a>
+    </nav>
+    <a class="book" href="https://wa.me/919620936143?text=Hi%20GR%20Tours%20%26%20Travels%2C%20I%20want%20to%20book%20a%20trip." target="_blank" rel="noopener">Book Now</a>
+  </div>
+  <div class="content">
+    <span class="badge lg"><i></i>Murdeshwar · Coastal Karnataka</span>
+    <h1>Escape to the Coast</h1>
+    <p>Safe journey, happy memories</p>
+  </div>
+  <div class="ask lg">
+    <span>Plan your trip in one message</span>
+    <a href="https://wa.me/919620936143?text=Hi%20GR%20Tours%20%26%20Travels%2C%20I%20want%20to%20book%20a%20trip." target="_blank" rel="noopener"><b><svg><use href="#i-wa"/></svg></b>Book on WhatsApp</a>
+  </div>
+</header>

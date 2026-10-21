@@ -1,0 +1,159 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<meta charset="utf-8">
+<title>GR Vehicles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+<style>
+/* Layout: heading + a glass "How many people?" counter, then three vehicle cards (5 · 7 · 11 seats).
+   The counter lights up the card that fits; the others dim slightly. Static otherwise. One light look, same glass as the other sections. */
+:root{
+  --bg:#EEF4FB; --ink:#0B1F44; --ink-2:#475569; --ink-3:#94A3B8; --red:#D52A33; --navy:#0E2A5C; --wa:#1FA35A; --shadow:rgba(14,42,92,.16);
+  --f:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:#1e293b;font-family:var(--f);-webkit-font-smoothing:antialiased}
+h2,h3,p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:12px}
+
+.sec{position:relative;isolation:isolate;overflow:hidden;padding-block:clamp(56px,8vw,96px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.glow{position:absolute;border-radius:50%;pointer-events:none;z-index:-1}
+.g1{top:-10%;right:10%;width:560px;height:560px;background:radial-gradient(circle,rgba(160,210,245,.75),transparent 70%);filter:blur(60px)}
+.g2{bottom:-15%;left:-5%;width:520px;height:520px;background:radial-gradient(circle,rgba(150,225,215,.5),transparent 70%);filter:blur(70px)}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:32px}
+
+/* glass bits */
+.lg{position:relative;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.46),rgba(220,235,250,.2) 55%,rgba(255,255,255,.32));-webkit-backdrop-filter:blur(12px) saturate(1.9);backdrop-filter:blur(12px) saturate(1.9);box-shadow:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -2px 4px rgba(14,42,92,.08),0 10px 24px -12px rgba(14,42,92,.3)}
+.lg::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:linear-gradient(140deg,#fff 0%,rgba(255,255,255,.25) 30%,rgba(14,42,92,.2) 62%,rgba(255,255,255,.9) 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#475569}
+.chip i{width:6px;height:6px;border-radius:50%;background:var(--red)}
+
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
+.head h2{margin-top:12px;font-size:clamp(2rem,4.4vw,3.1rem);font-weight:300;letter-spacing:-.03em;line-height:1.05;color:var(--ink)}
+.head h2 b{font-weight:700}
+
+/* people counter */
+.helper{display:flex;align-items:center;gap:14px;padding:8px 10px 8px 20px;border-radius:999px}
+.helper .q{font-size:.85rem;font-weight:600;color:var(--ink)}
+.step{display:flex;align-items:center;gap:6px}
+.dot-btn{position:relative;width:34px;height:34px;border:0;border-radius:50%;display:grid;place-items:center;font-size:1.1rem;font-weight:700;color:var(--ink);
+  background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(225,238,250,.45));box-shadow:inset 0 1px 1px #fff,inset 0 -2px 3px rgba(14,42,92,.1),0 4px 10px -4px rgba(14,42,92,.35)}
+.dot-btn:active{transform:scale(.92)}
+.step output{min-width:34px;text-align:center;font-size:1.3rem;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.fit{font-size:.82rem;color:var(--ink-2);min-height:1.2em}
+.fit b{color:var(--navy)}
+
+.grid{display:grid;gap:18px;grid-template-columns:1fr}
+@media (min-width:860px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{position:relative;display:grid;gap:14px;padding:22px;border-radius:26px;
+  background:rgba(255,255,255,.34);-webkit-backdrop-filter:blur(24px) saturate(1.8);backdrop-filter:blur(24px) saturate(1.8);
+  border:1px solid rgba(255,255,255,.9);box-shadow:0 30px 60px -36px var(--shadow),inset 0 1px 2px rgba(255,255,255,.95);
+  transition:opacity .3s,transform .3s,box-shadow .3s}
+.card.dim{opacity:.72}
+.card.fit-on{transform:translateY(-4px);box-shadow:0 36px 70px -34px rgba(14,42,92,.35),inset 0 1px 2px #fff,0 0 0 2px rgba(14,42,92,.25)}
+.card .tag{position:absolute;top:16px;right:16px;font-size:.6rem;padding:4px 10px;color:var(--navy)}
+.card .tag.fitlbl{display:none}
+.card.fit-on .tag.fitlbl{display:inline-flex;background:linear-gradient(180deg,rgba(214,234,252,.95),rgba(170,208,240,.6))}
+.card.fit-on .tag.pop{display:none}
+.pic{height:170px;display:flex;align-items:flex-end;justify-content:center}
+.pic img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 16px 16px rgba(14,42,92,.16))}
+.pic .soon{width:100%;height:100%;border-radius:18px;border:2px dashed rgba(14,42,92,.16);display:grid;place-items:center;font-size:.78rem;font-weight:600;color:var(--ink-3)}
+.seats{display:flex;align-items:baseline;gap:8px}
+.seats b{font-size:2.6rem;font-weight:800;letter-spacing:-.04em;line-height:1;color:var(--ink)}
+.seats span{font-size:.95rem;font-weight:600;color:var(--ink-2)}
+.card h3{font-size:1rem;font-weight:600;color:var(--ink-2);margin-top:-6px}
+.facts{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.facts li{display:flex;align-items:center;gap:10px;font-size:.86rem;color:#334155}
+.facts svg{width:18px;height:18px;flex:none;color:var(--navy)}
+.ask{justify-self:start;display:inline-flex;align-items:center;gap:8px;margin-top:4px;padding:8px 18px 8px 8px;border-radius:999px;color:#fff;font-size:.85rem;font-weight:600;text-decoration:none;
+  background:linear-gradient(180deg,rgba(40,70,128,.8),rgba(10,30,70,.92));box-shadow:inset 0 1px 1px rgba(255,255,255,.55),inset 0 -3px 6px rgba(0,0,0,.3),0 12px 24px -12px rgba(10,30,70,.6)}
+.ask span{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 28%,#7BE3A6,#22B262 55%,#13814A)}
+.ask svg{width:12px;height:12px}
+.note{font-size:.8rem;color:var(--ink-3)}
+@media (max-width:560px){.helper{width:100%;justify-content:space-between;padding-left:16px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.2-.2-.5-.3Z"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 6"/></g></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="5" y="7" width="14" height="13" rx="2"/><path d="M9 7V4h6v3M9 20v1M15 20v1"/></g></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z"/></symbol>
+</defs></svg>
+
+<section class="sec" id="vehicles">
+  <span class="glow g1"></span><span class="glow g2"></span>
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <span class="chip lg"><i></i>Our vehicles</span>
+        <h2>The right ride for your <b>group</b></h2>
+      </div>
+      <div style="display:grid;gap:8px;justify-items:end">
+        <div class="helper lg">
+          <span class="q">How many people?</span>
+          <div class="step">
+            <button type="button" class="dot-btn" id="minus" aria-label="Fewer people">−</button>
+            <output id="pax" aria-live="polite">4</output>
+            <button type="button" class="dot-btn" id="plus" aria-label="More people">+</button>
+          </div>
+        </div>
+        <p class="fit" id="fit" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    <p class="note">Need more than one vehicle for a big group? Ask us and we'll arrange it.</p>
+  </div>
+</section>
+
+<script>
+(function(){
+  var WA = '919620936143';
+  var V = [
+    {seats:5, name:'Family car', img:'img/seat5.webp', max:4, best:'Couples and small families', bags:'Room for 2 to 3 bags'},
+    {seats:7, name:'Family MUV', img:'img/seat7.webp', max:6, best:'Families and friends', bags:'Room for 3 to 4 bags', pop:true},
+    {seats:11, name:'Tempo traveller', img:'img/seat11.webp', max:10, best:'Big families and groups', bags:'Plenty of luggage space'}
+  ];
+  var grid = document.getElementById('grid'), paxEl = document.getElementById('pax'), fitEl = document.getElementById('fit');
+  var pax = 4, cards = [];
+  V.forEach(function(v){
+    var c = document.createElement('article'); c.className = 'card';
+    c.innerHTML =
+      (v.pop ? '<span class="chip lg tag pop">Most booked</span>' : '') +
+      '<span class="chip lg tag fitlbl">Fits your group</span>' +
+      '<div class="pic">' + (v.img ? '<img src="' + v.img + '" alt="">' : '<div class="soon">Photo coming soon</div>') + '</div>' +
+      '<div class="seats"><b>' + v.seats + '</b><span>seater</span></div>' +
+      '<h3></h3>' +
+      '<ul class="facts">' +
+        '<li><svg><use href="#i-people"/></svg>Up to ' + v.max + ' travellers + driver</li>' +
+        '<li><svg><use href="#i-bag"/></svg><span class="b"></span></li>' +
+        '<li><svg><use href="#i-star"/></svg><span class="s"></span></li>' +
+      '</ul>' +
+      '<a class="ask" target="_blank" rel="noopener"><span><svg><use href="#i-wa"/></svg></span>Book this vehicle</a>';
+    c.querySelector('h3').textContent = v.name;
+    c.querySelector('.b').textContent = v.bags;
+    c.querySelector('.s').textContent = 'Best for ' + v.best.toLowerCase();
+    if (v.img) c.querySelector('img').alt = v.seats + '-seater ' + v.name;
+    grid.appendChild(c); cards.push({el:c, v:v, a:c.querySelector('.ask')});
+  });
+  function update(){
+    paxEl.textContent = pax;
+    var k = -1; for (var i = 0; i < V.length; i++){ if (pax <= V[i].max){ k = i; break; } }
+    cards.forEach(function(c, i){
+      c.el.classList.toggle('fit-on', i === k);
+      c.el.classList.toggle('dim', k >= 0 && i !== k);
+      c.a.href = 'https://wa.me/' + WA + '?text=' + encodeURIComponent('Hi GR Tours & Travels, I need the ' + c.v.seats + '-seater ' + c.v.name.toLowerCase() + ' for ' + pax + ' people. Please share the price.');
+    });
+    fitEl.innerHTML = k >= 0 ? 'Best fit: <b>' + V[k].seats + '-seater</b>' : 'More than 10? <b>We can send two vehicles.</b>';
+  }
+  document.getElementById('minus').addEventListener('click', function(){ pax = Math.max(1, pax - 1); update(); });
+  document.getElementById('plus').addEventListener('click', function(){ pax = Math.min(30, pax + 1); update(); });
+  update();
+})();
+</script>

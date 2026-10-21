@@ -1,0 +1,174 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<meta charset="utf-8">
+<title>GR Footer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+<style>
+/* Layout: a light glass "ready to go" band that closes the page, then a deep navy footer:
+   brand + tagline | quick links | services | contact (numbers, address, map). Bottom row: copyright.
+   Floating glass WhatsApp button fixed bottom-right. One look by design (light band, navy footer). */
+:root{
+  --bg:#EEF4FB; --ink:#0B1F44; --ink-2:#475569; --ink-3:#94A3B8; --red:#D52A33; --navy:#0B1F44; --navy-2:#132C5C; --wa:#1FA35A;
+  --on:#FFFFFF; --on-2:#B9C6DD; --on-3:#7F90AE; --shadow:rgba(14,42,92,.18);
+  --f:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:#1e293b;font-family:var(--f);-webkit-font-smoothing:antialiased}
+h2,h3,h4,p{margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid #F5B31B;outline-offset:3px;border-radius:10px}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto}
+
+/* ---- closing band ---- */
+.band{position:relative;isolation:isolate;overflow:hidden;padding-block:clamp(48px,7vw,80px)}
+.band .glow{position:absolute;border-radius:50%;pointer-events:none;z-index:-1}
+.band .g1{top:-30%;left:10%;width:520px;height:520px;background:radial-gradient(circle,rgba(160,210,245,.8),transparent 70%);filter:blur(60px)}
+.band .g2{bottom:-40%;right:5%;width:480px;height:480px;background:radial-gradient(circle,rgba(253,220,140,.6),transparent 70%);filter:blur(70px)}
+.cta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px 28px;padding:clamp(22px,3.4vw,36px);border-radius:30px;
+  background:rgba(255,255,255,.34);-webkit-backdrop-filter:blur(24px) saturate(1.8);backdrop-filter:blur(24px) saturate(1.8);border:1px solid rgba(255,255,255,.9);
+  box-shadow:0 30px 60px -36px var(--shadow),inset 0 1px 2px rgba(255,255,255,.95)}
+.cta h2{font-size:clamp(1.7rem,3.6vw,2.6rem);font-weight:300;letter-spacing:-.03em;line-height:1.1;color:var(--ink)}
+.cta h2 b{font-weight:700}
+.cta p{margin-top:8px;color:var(--ink-2);font-weight:300}
+.cta .acts{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:11px 22px 11px 11px;border-radius:999px;font-weight:600;font-size:.92rem;text-decoration:none;position:relative;overflow:hidden}
+.btn .ic{width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
+.btn svg{width:14px;height:14px}
+.btn.navy{color:#fff;background:linear-gradient(180deg,rgba(40,70,128,.8),rgba(10,30,70,.92));box-shadow:inset 0 1px 1px rgba(255,255,255,.55),inset 0 -3px 6px rgba(0,0,0,.3),0 14px 28px -12px rgba(10,30,70,.6)}
+.btn.navy .ic{background:radial-gradient(circle at 35% 28%,#7BE3A6,#22B262 55%,#13814A)}
+.btn.glass{color:var(--ink);background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(220,235,250,.35));box-shadow:inset 0 1px 1px #fff,inset 0 -2px 4px rgba(14,42,92,.08),0 10px 24px -12px rgba(14,42,92,.3)}
+.btn.glass .ic{color:#fff;background:linear-gradient(180deg,#2A4E8E,#0E2A5C)}
+.btn:hover{transform:translateY(-1px)}
+
+/* ---- footer ---- */
+footer{position:relative;isolation:isolate;overflow:hidden;background:var(--navy);color:var(--on-2)}
+footer::before{content:"";position:absolute;inset:0;z-index:-1;background:
+  radial-gradient(40% 60% at 10% 0%,rgba(42,78,142,.55),transparent 70%),
+  radial-gradient(35% 50% at 95% 100%,rgba(213,42,51,.18),transparent 70%)}
+.top{display:grid;gap:36px 28px;padding-block:clamp(44px,6vw,64px) 36px}
+@media (min-width:900px){.top{grid-template-columns:1.4fr .8fr 1fr 1.3fr}}
+@media (min-width:600px) and (max-width:899px){.top{grid-template-columns:1fr 1fr}}
+.brand{display:grid;gap:14px;align-content:start}
+.logo{display:flex;align-items:center;gap:12px;color:var(--on)}
+.logo .gr{font-weight:900;font-style:italic;font-size:2rem;letter-spacing:-.05em;line-height:1}
+.logo .gr i{font-style:inherit;color:#F05A61}
+.logo .sep{width:1.5px;height:28px;background:rgba(255,255,255,.35)}
+.logo .nm{font-weight:800;font-size:.82rem;letter-spacing:.12em;line-height:1.25}
+.logo .nm small{display:block;font-weight:500;letter-spacing:.08em;color:var(--on-3)}
+.brand p{max-width:34ch;font-weight:300;line-height:1.55}
+.brand .tag{font-weight:600;color:var(--on)}
+h4{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--on-3);margin-bottom:14px}
+ul.links{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+ul.links a{text-decoration:none;font-size:.92rem;color:var(--on-2);transition:color .2s}
+ul.links a:hover{color:var(--on)}
+ul.links li.svc{font-size:.92rem}
+.contact{display:grid;gap:12px;align-content:start}
+.num{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 10px 10px 14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.num .lbl{width:100%;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--on-3)}
+.num a{font-size:1.2rem;font-weight:800;letter-spacing:.02em;color:var(--on);text-decoration:none;font-variant-numeric:tabular-nums;user-select:all}
+.copy{margin-left:auto;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:var(--on);border-radius:999px;padding:5px 12px;font-size:.72rem;font-weight:600}
+.copy:hover{background:rgba(255,255,255,.14)}
+.addr{display:flex;gap:10px;align-items:flex-start;font-size:.9rem;line-height:1.5}
+.addr svg{width:18px;height:18px;flex:none;margin-top:2px;color:#F5B31B}
+.map{font-size:.82rem;font-weight:600;color:var(--on);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.3);justify-self:start}
+.map:hover{border-color:var(--on)}
+.bottom{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;padding-block:18px calc(18px + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(255,255,255,.1);font-size:.8rem;color:var(--on-3)}
+
+/* ---- floating WhatsApp ---- */
+.fab{position:fixed;z-index:30;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;padding:8px 18px 8px 8px;border-radius:999px;text-decoration:none;color:var(--ink);font-weight:600;font-size:.88rem;
+  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(220,235,250,.45));-webkit-backdrop-filter:blur(16px) saturate(1.8);backdrop-filter:blur(16px) saturate(1.8);
+  box-shadow:inset 0 1px 1px #fff,inset 0 -2px 4px rgba(14,42,92,.08),0 16px 36px -14px rgba(14,42,92,.45)}
+.fab .ic{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 35% 28%,#7BE3A6,#22B262 55%,#13814A);box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 6px 14px -6px rgba(31,163,90,.9)}
+.fab .ic svg{width:20px;height:20px}
+.fab .ic::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(31,163,90,.5);animation:ring 2.4s ease-out infinite}
+@keyframes ring{from{transform:scale(.85);opacity:1}to{transform:scale(1.5);opacity:0}}
+@media (max-width:560px){.fab span.t{display:none}.fab{padding:6px}}
+@media (prefers-reduced-motion:reduce){.fab .ic::after{animation:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.2-.2-.5-.3Z"/></symbol>
+  <symbol id="i-call" viewBox="0 0 24 24"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1Z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></symbol>
+</defs></svg>
+
+<section class="band gut" id="contact">
+  <span class="glow g1"></span><span class="glow g2"></span>
+  <div class="wrap cta">
+    <div>
+      <h2>Ready for your <b>coastal escape?</b></h2>
+      <p>Tell us where, when and how many. We'll send the fare and the right vehicle.</p>
+    </div>
+    <div class="acts">
+      <a class="btn navy" href="https://wa.me/919620936143?text=Hi%20GR%20Tours%20%26%20Travels%2C%20I%20want%20to%20book%20a%20trip." target="_blank" rel="noopener"><span class="ic"><svg><use href="#i-wa"/></svg></span>Book on WhatsApp</a>
+      <a class="btn glass" href="tel:+919620936143"><span class="ic"><svg><use href="#i-call"/></svg></span>96209 36143</a>
+    </div>
+  </div>
+</section>
+
+<footer class="gut">
+  <div class="wrap top">
+    <div class="brand">
+      <div class="logo"><span class="gr">G<i>R</i></span><span class="sep"></span><span class="nm">TOURS &amp; TRAVELS<small>All types of tourist vehicles</small></span></div>
+      <p><span class="tag">Safe journey, happy memories.</span><br>Taxis and tourist vehicles for the Karavali coast and the Western Ghats, from airport runs to full tours.</p>
+    </div>
+
+    <nav aria-label="Footer">
+      <h4>Explore</h4>
+      <ul class="links">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#route">Coastal route</a></li>
+        <li><a href="#plans">Tour plans</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#vehicles">Vehicles</a></li>
+      </ul>
+    </nav>
+
+    <div>
+      <h4>Services</h4>
+      <ul class="links">
+        <li class="svc">Airport pickup &amp; drop</li>
+        <li class="svc">Outstation &amp; family trips</li>
+        <li class="svc">Tour packages</li>
+        <li class="svc">Scuba diving at Netrani</li>
+        <li class="svc">Rooms wherever we go</li>
+      </ul>
+    </div>
+
+    <div class="contact">
+      <h4>Contact</h4>
+      <div class="num"><span class="lbl">Call &amp; WhatsApp</span><a href="tel:+919620936143">96209 36143</a><button type="button" class="copy" data-copy="9620936143">Copy</button></div>
+      <div class="num"><span class="lbl">Call</span><a href="tel:+919141857173">91418 57173</a><button type="button" class="copy" data-copy="9141857173">Copy</button></div>
+      <div class="addr"><svg><use href="#i-pin"/></svg><span>Murdeshwar, Bhatkal Taluk,<br>Uttara Kannada, Karnataka</span></div>
+      <a class="map" href="https://www.google.com/maps/search/?api=1&amp;query=Murdeshwar%2C%20Bhatkal%2C%20Karnataka" target="_blank" rel="noopener">Open in Google Maps ↗</a>
+    </div>
+  </div>
+  <div class="wrap bottom">
+    <span>© <span id="yr">2026</span> GR Tours &amp; Travels. All rights reserved.</span>
+    <span>Murdeshwar · Coastal Karnataka</span>
+  </div>
+</footer>
+
+<a class="fab" href="https://wa.me/919620936143?text=Hi%20GR%20Tours%20%26%20Travels%2C%20I%20want%20to%20book%20a%20trip." target="_blank" rel="noopener" aria-label="Chat on WhatsApp"><span class="ic"><svg><use href="#i-wa"/></svg></span><span class="t">Chat with us</span></a>
+
+<script>
+(function(){
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  document.querySelectorAll('[data-copy]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var done = function(t){ var o = b.textContent; b.textContent = t; setTimeout(function(){ b.textContent = o; }, 1500); };
+      try {
+        navigator.clipboard.writeText(b.dataset.copy).then(function(){ done('Copied'); }, function(){ sel(); });
+      } catch(e){ sel(); }
+      function sel(){ try { var r = document.createRange(); r.selectNodeContents(b.previousElementSibling); var s = getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); } catch(e){} }
+    });
+  });
+})();
+</script>
