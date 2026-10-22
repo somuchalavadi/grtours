@@ -1,0 +1,874 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<meta charset="utf-8">
+<title>GR Trip Planner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+<style>
+/* Trip Planner: a gold ✦ button above the WhatsApp button opens a liquid-glass panel (desktop) or bottom sheet (phone).
+   Everything is position:fixed, so the section adds no height to the page. Plans are made in the browser from the
+   built-in place data below; there are no network calls. */
+:root{
+  --ink:#0B1F44; --ink-2:#475569; --ink-3:#8593A8; --red:#D52A33; --navy:#0B1F44; --gold:#F5B31B; --gold-ink:#8A5A00;
+  --f:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:#EEF4FB;color:#1e293b;font-family:var(--f);-webkit-font-smoothing:antialiased}
+.tp p,.tp h2,.tp h3,.tp h4,.tp ol,.tp ul{margin:0}
+:where(.tp) button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tp :focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.tp-panel:focus{outline:none}
+.tp .ico{width:18px;height:18px;flex:none}
+
+/* liquid glass (same recipe as the other sections) */
+.lg,.lg-on{position:relative;isolation:isolate;border:0}
+.lg{background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(220,235,250,.3) 55%,rgba(255,255,255,.45));-webkit-backdrop-filter:blur(12px) saturate(1.9);backdrop-filter:blur(12px) saturate(1.9);box-shadow:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -2px 4px rgba(14,42,92,.07),inset 0 0 12px rgba(255,255,255,.35),0 8px 20px -12px rgba(14,42,92,.3)}
+.lg-on{color:var(--ink);background:linear-gradient(180deg,rgba(214,234,252,.92),rgba(170,208,240,.5));-webkit-backdrop-filter:blur(14px) saturate(2);backdrop-filter:blur(14px) saturate(2);box-shadow:inset 0 1px 1px #fff,inset 0 -2px 4px rgba(14,42,92,.12),inset 0 0 0 1.5px rgba(11,31,68,.55),0 8px 18px -8px rgba(14,42,92,.35)}
+.lg::before,.lg-on::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:2;background:linear-gradient(140deg,#fff 0%,rgba(255,255,255,.25) 30%,rgba(14,42,92,.2) 62%,rgba(255,255,255,.9) 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.lg-on::before{background:linear-gradient(140deg,#fff,rgba(255,255,255,.2) 35%,rgba(14,42,92,.38) 65%,#fff)}
+.lg::after,.lg-on::after{content:"";position:absolute;left:8%;right:8%;top:1px;height:46%;border-radius:999px 999px 60% 60%/999px 999px 100% 100%;background:linear-gradient(180deg,rgba(255,255,255,.65),rgba(255,255,255,0));pointer-events:none;z-index:-1}
+
+/* launcher: sits above the "Chat with us" button (script measures it; these are the fallbacks) */
+.tp-launch{position:fixed;z-index:31;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;transition:opacity .25s,transform .3s,visibility 0s}
+@media (max-width:560px){.tp-launch{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+.tp.open .tp-launch{opacity:0;visibility:hidden;transform:translateY(10px) scale(.9);transition:opacity .2s,transform .3s,visibility 0s .3s}
+.tp-lbl{border-radius:999px;padding:9px 16px;font-size:.85rem;font-weight:600;color:var(--ink);white-space:nowrap;cursor:pointer;user-select:none;transition:opacity .2s,visibility 0s}
+/* step aside while it would cover a button of the section underneath: first the label, then the whole launcher */
+.tp-launch.nolbl .tp-lbl,.tp-launch.tuck{opacity:0;visibility:hidden;transition:opacity .2s,transform .25s,visibility 0s .25s}
+
+@media (max-width:639px){.tp-lbl{display:none}}
+.tp-spark{position:relative;width:54px;height:54px;flex:none;border-radius:50%;border:0;padding:0;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 34% 26%,#FFE9A8 0%,#FFCB45 30%,#F5B31B 58%,#C98A06 100%);
+  box-shadow:inset 0 2px 2px rgba(255,255,255,.75),inset 0 -4px 8px rgba(150,95,0,.35),0 0 0 1px rgba(201,138,6,.28),0 12px 24px -10px rgba(201,138,6,.8);transition:transform .25s}
+.tp-spark::before{content:"";position:absolute;left:15%;right:15%;top:5%;height:42%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0));pointer-events:none}
+.tp-spark::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;animation:tpPulse 6s ease-out infinite}
+@keyframes tpPulse{0%,76%{box-shadow:0 0 0 0 rgba(245,179,27,0)}80%{box-shadow:0 0 0 0 rgba(245,179,27,.6),0 0 16px 2px rgba(245,179,27,.45)}100%{box-shadow:0 0 0 18px rgba(245,179,27,0),0 0 28px 6px rgba(245,179,27,0)}}
+.tp-spark svg{position:relative;width:24px;height:24px;filter:drop-shadow(0 1px 1px rgba(140,90,0,.45))}
+.tp-spark:hover{transform:translateY(-2px) scale(1.04)}
+.tp-spark:active{transform:scale(.96)}
+
+/* panel: desktop card / phone bottom sheet */
+.tp-scrim{position:fixed;inset:0;z-index:58;background:rgba(11,31,68,.34);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;visibility:hidden;transition:opacity .3s,visibility 0s .3s;touch-action:none}
+.tp.open .tp-scrim{opacity:1;visibility:visible;transition:opacity .3s}
+@media (min-width:640px){.tp-scrim{display:none}}
+.tp-panel{position:fixed;z-index:60;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:400px;max-width:calc(100vw - 40px);
+  max-height:min(680px,calc(100vh - 120px));max-height:min(680px,calc(100svh - 120px));display:flex;flex-direction:column;border-radius:28px;overflow:hidden;isolation:isolate;color:var(--ink);
+  background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.55)),linear-gradient(180deg,rgba(241,247,253,.66),rgba(233,241,250,.74));
+  -webkit-backdrop-filter:blur(22px) saturate(1.8);backdrop-filter:blur(22px) saturate(1.8);
+  box-shadow:0 40px 80px -30px rgba(14,42,92,.5),0 14px 34px -18px rgba(14,42,92,.35),inset 0 1px 1px rgba(255,255,255,.95);
+  opacity:0;visibility:hidden;transform:translateY(24px) scale(.97);transform-origin:100% 100%;transition:opacity .25s,transform .45s cubic-bezier(.2,1.15,.4,1),visibility 0s .45s}
+.tp-panel::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:3;background:linear-gradient(150deg,#fff 0%,rgba(255,255,255,.3) 30%,rgba(14,42,92,.18) 65%,rgba(255,255,255,.9) 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.tp-panel::after{content:"";position:absolute;left:0;right:0;top:0;height:90px;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none;z-index:-1}
+.tp.open .tp-panel{opacity:1;visibility:visible;transform:none;transition:opacity .25s,transform .45s cubic-bezier(.2,1.15,.4,1)}
+.tp-grab{display:none}
+@media (max-width:639px){
+  .tp-panel{left:0;right:0;bottom:0;width:auto;max-width:none;height:88vh;height:88svh;max-height:none;border-radius:26px 26px 0 0;opacity:1;transform:translateY(105%);
+    transition:transform .42s cubic-bezier(.2,.9,.25,1),visibility 0s .42s}
+  .tp.open .tp-panel{transform:translateY(0);transition:transform .42s cubic-bezier(.2,.9,.25,1)}
+  .tp-panel.drag{transition:none!important}
+  .tp-grab{display:block;padding:9px 0 3px;touch-action:none}
+  .tp-grab i{display:block;width:42px;height:5px;margin:0 auto;border-radius:999px;background:rgba(11,31,68,.2)}
+}
+
+.tp-hd{display:flex;align-items:center;gap:12px;padding:16px 16px 14px 20px;border-bottom:1px solid rgba(255,255,255,.8);flex:none}
+@media (max-width:639px){.tp-hd{padding-top:8px;touch-action:none}}
+.tp-gr{font-weight:900;font-style:italic;font-size:1.6rem;letter-spacing:-.05em;line-height:1;color:var(--navy)}
+.tp-gr i{font-style:inherit;color:var(--red)}
+.tp-hd h2{font-size:1rem;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.2}
+.tp-sub{font-size:.72rem;color:var(--ink-3);margin-top:2px}
+.tp-sub .m{display:none}
+@media (max-width:639px){.tp-sub[data-step="form"] .d{display:none}.tp-sub[data-step="form"] .m{display:inline}}
+.tp-x{margin-left:auto;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;color:var(--ink)}
+.tp-x svg{width:15px;height:15px}
+
+.tp-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:18px 20px 22px}
+@media (max-width:639px){.tp-body{padding:16px 18px calc(22px + env(safe-area-inset-bottom,0px))}}
+
+/* step 1: form */
+.tp-q{font-size:.66rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+.tp-f + .tp-f{margin-top:20px}
+.tp-days{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tp-days button{height:46px;border-radius:14px;font-size:1.02rem;font-weight:600;color:var(--ink)}
+.tp-starts{display:flex;flex-wrap:wrap;gap:8px}
+.tp-starts button{border-radius:999px;padding:8px 14px;font-size:.8rem;font-weight:500;color:#334155}
+.tp-starts button.lg-on{font-weight:600;color:var(--ink)}
+.tp-ints{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tp-ints button{display:flex;align-items:center;gap:9px;min-height:50px;padding:9px 10px;border-radius:14px;text-align:left;font-size:.8rem;font-weight:600;line-height:1.2;color:var(--ink)}
+.tp-ck{width:20px;height:20px;flex:none;border-radius:50%;display:grid;place-items:center;border:1.5px solid rgba(11,31,68,.3);background:rgba(255,255,255,.6);color:#fff;transition:background .2s,border-color .2s}
+.tp-ck svg{width:12px;height:12px;opacity:0;transform:scale(.6);transition:opacity .2s,transform .25s cubic-bezier(.3,1.6,.5,1)}
+.tp-ints button[aria-checked="true"] .tp-ck{background:var(--navy);border-color:var(--navy)}
+.tp-ints button[aria-checked="true"] .tp-ck svg{opacity:1;transform:none}
+.tp-ints .ico{width:17px;height:17px;color:#2E5A92}
+.tp-ints.shake{animation:tpShake .45s ease-in-out}
+@keyframes tpShake{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.tp-ppl{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tp-ppl .tp-q{margin:0}
+.tp-cnt{display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px}
+.tp-cnt button{width:34px;height:34px;border-radius:50%;border:0;background:none;display:grid;place-items:center;color:var(--ink)}
+.tp-cnt button:hover{background:rgba(255,255,255,.7)}
+.tp-cnt button:disabled{opacity:.35;cursor:default;background:none}
+.tp-cnt button svg{width:14px;height:14px}
+.tp-cnt output{min-width:30px;text-align:center;font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tp-hint{margin-top:10px;text-align:center;font-size:.78rem;font-weight:600;color:var(--red)}
+
+/* navy glass buttons */
+.tp-go,.tp-book{position:relative;overflow:hidden;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;color:#fff;font-weight:600;text-decoration:none;
+  border:1px solid rgba(255,255,255,.28);background:linear-gradient(180deg,rgba(40,70,128,.88),rgba(10,30,70,.95));
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.55),inset 0 -3px 6px rgba(0,0,0,.3),inset 0 0 14px rgba(120,170,255,.2),0 14px 30px -12px rgba(10,30,70,.6);transition:transform .25s,box-shadow .25s}
+.tp-go::after,.tp-book::after{content:"";position:absolute;left:8%;right:8%;top:1px;height:44%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,0));pointer-events:none;z-index:0}
+.tp-go > *,.tp-book > *{position:relative;z-index:1}
+.tp-go:hover,.tp-book:hover{transform:translateY(-1px);box-shadow:inset 0 1px 1px rgba(255,255,255,.6),inset 0 -3px 6px rgba(0,0,0,.3),0 18px 34px -12px rgba(10,30,70,.65)}
+.tp-go:active,.tp-book:active{transform:scale(.985)}
+.tp-go{margin-top:24px;padding:15px 20px;font-size:.95rem}
+.tp-go svg{width:15px;height:15px;color:#FFD56A}
+.tp-book{padding:9px 20px 9px 9px;font-size:.92rem;margin-top:18px}
+.tp-wa{width:32px;height:32px;flex:none;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 28%,#7BE3A6,#22B262 55%,#13814A);box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 -2px 3px rgba(0,0,0,.2),0 4px 10px -4px rgba(31,163,90,.8)}
+.tp-wa svg{width:16px;height:16px}
+
+/* step 2: plan */
+.tp-pt{font-size:1.18rem;font-weight:800;letter-spacing:-.02em;line-height:1.25;color:var(--ink)}
+.tp-pt:focus{outline:none}
+.tp-ps{font-size:.82rem;color:var(--ink-2);margin-top:6px;line-height:1.45}
+.tp-best{display:flex;gap:8px;align-items:flex-start;margin-top:14px;padding:10px 12px;border-radius:14px;font-size:.79rem;line-height:1.45;color:#5E4300;
+  background:linear-gradient(180deg,rgba(255,245,212,.92),rgba(253,226,150,.55));box-shadow:inset 0 0 0 1px rgba(214,164,38,.45),inset 0 1px 1px #fff,0 8px 18px -12px rgba(154,106,5,.45)}
+.tp-best svg{width:16px;height:16px;flex:none;color:#C98A06;margin-top:1px}
+.tp-best b{color:#4A3400}
+.tp-day{margin-top:20px}
+.tp-dh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tp-dh h4{font-size:.93rem;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.tp-pill{flex:none;font-size:.6rem;font-weight:800;letter-spacing:.08em;color:#fff;background:linear-gradient(180deg,#24467F,#0B1F44);padding:4px 9px;border-radius:999px;box-shadow:inset 0 1px 1px rgba(255,255,255,.35)}
+.tp-fill{font-size:.72rem;color:var(--ink-3);margin-top:3px}
+.tp-stops{list-style:none;padding:0;display:grid;gap:8px;margin-top:10px}
+.tp-stop{display:grid;grid-template-columns:32px 1fr;gap:10px;padding:12px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,.55));box-shadow:inset 0 1px 1px #fff,inset 0 0 0 1px rgba(255,255,255,.7),0 8px 18px -14px rgba(14,42,92,.35);
+  animation:tpRise .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 70ms)}
+@keyframes tpRise{from{opacity:0;transform:translateY(14px)}}
+.tp-si{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#2E5A92;background:linear-gradient(180deg,rgba(225,238,252,.95),rgba(200,222,245,.6));box-shadow:inset 0 1px 1px #fff,inset 0 0 0 1px rgba(46,90,146,.15)}
+.tp-si .ico{width:16px;height:16px}
+.tp-sn{display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px;font-size:.88rem;font-weight:700;color:var(--ink);line-height:1.3}
+.tp-cat{font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4B5B73;padding:2px 8px;border-radius:999px;background:rgba(11,31,68,.06)}
+.tp-hr{font-size:.72rem;font-weight:600;color:var(--ink-3)}
+.tp-sd{font-size:.78rem;color:#334155;margin-top:3px;line-height:1.45}
+.tp-sv{font-size:.74rem;color:#9A6A05;margin-top:4px;line-height:1.4}
+.tp-meta{font-size:.78rem;color:#334155;margin-top:9px;line-height:1.55}
+.tp-meta b{color:var(--ink);font-weight:700}
+.tp-veh{display:flex;align-items:center;gap:10px;margin-top:20px;padding:11px 14px;border-radius:14px;font-size:.8rem;color:#334155;line-height:1.4}
+.tp-veh .ico{color:#2E5A92}
+.tp-veh b{color:var(--ink)}
+.tp-tips{margin-top:12px;padding:12px 14px;border-radius:14px;background:linear-gradient(180deg,rgba(255,248,226,.85),rgba(255,236,180,.4));box-shadow:inset 0 0 0 1px rgba(214,164,38,.35),inset 0 1px 1px #fff}
+.tp-tips h4{font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#9A6A05;margin-bottom:6px}
+.tp-tips ul{list-style:none;padding:0;display:grid;gap:5px}
+.tp-tips li{display:flex;gap:8px;font-size:.77rem;color:#3F3A2E;line-height:1.45}
+.tp-tips li::before{content:"✦";flex:none;color:var(--gold);font-size:.7rem;line-height:1.6}
+.tp-row{display:flex;gap:8px;margin-top:10px}
+.tp-row button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 10px;border-radius:999px;font-size:.82rem;font-weight:600;color:var(--ink)}
+.tp-row svg{width:15px;height:15px}
+.tp-fine{margin-top:12px;text-align:center;font-size:.7rem;color:var(--ink-3)}
+.tp-copybox{width:100%;height:120px;margin-top:10px;padding:10px;border-radius:12px;border:1px solid rgba(11,31,68,.2);font:inherit;font-size:.74rem;color:var(--ink);background:rgba(255,255,255,.85);resize:vertical}
+.tp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (prefers-reduced-motion:reduce){
+  .tp *,.tp *::before,.tp *::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="tpi-spark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1.8c.7 5.4 2.9 8.2 10.2 10.2-7.3 2-9.5 4.8-10.2 10.2C11.3 16.8 9.1 14 1.8 12 9.1 10 11.3 7.2 12 1.8Z"/></symbol>
+  <symbol id="tpi-waterfall" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c3.2 4.3 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 2.8-6.7 6-11Z"/><path d="M9.5 15a2.6 2.6 0 0 0 2.5 2.5"/></g></symbol>
+  <symbol id="tpi-beach" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5a8 8 0 0 1 15.4-.8Z"/><path d="M11.7 9 14 16"/><path d="M3 19.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1"/></g></symbol>
+  <symbol id="tpi-island" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V9"/><path d="M12 9c-1.5-2.6-4.5-3.4-7.5-2.2M12 9c1.5-2.6 4.5-3.4 7.5-2.2M12 9c-2.2-.4-4.4 1-5 3.6M12 9c2.2-.4 4.4 1 5 3.6"/><path d="M6.5 17.5h11"/><path d="M3 20.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1"/></g></symbol>
+  <symbol id="tpi-temple" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5v2"/><path d="M10.2 7h3.6l-.6-2.5h-2.4Z"/><path d="M8.6 11h6.8L13.8 7h-3.6Z"/><path d="M6.8 15.5h10.4L15.4 11H8.6Z"/><path d="M5.5 21V15.5h13V21"/><path d="M10 21v-3a2 2 0 0 1 4 0v3"/><path d="M3.5 21h17"/></g></symbol>
+  <symbol id="tpi-heritage" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9 12 4l9 5"/><path d="M5.5 10v8M10 10v8M14 10v8M18.5 10v8"/><path d="M3 20.5h18"/></g></symbol>
+  <symbol id="tpi-nature" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19.5C5 10.8 10.6 5 19.5 4.5 19 13.4 13.2 19 5 19.5Z"/><path d="M5 19.5 13 11.5"/></g></symbol>
+  <symbol id="tpi-viewpoint" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 19.5 6.5-9.5 4 5.5 2.5-3.2 6 7.2Z"/><circle cx="16.5" cy="6.5" r="2"/></g></symbol>
+  <symbol id="tpi-park" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-5.5"/><path d="M12 3a5 5 0 0 1 4.9 6A3.8 3.8 0 0 1 15.5 16h-7A3.8 3.8 0 0 1 7.1 9 5 5 0 0 1 12 3Z"/><path d="M8 21h8"/></g></symbol>
+  <symbol id="tpi-adventure" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 21V3.5"/><path d="M5.5 4h11.5l-2.5 4 2.5 4H5.5"/></g></symbol>
+  <symbol id="tpi-wildlife" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.3" cy="10" r="1.8"/><circle cx="10" cy="5.8" r="1.8"/><circle cx="14.6" cy="5.8" r="1.8"/><circle cx="18.1" cy="10" r="1.8"/><path d="M8.2 18c0-3.2 1.8-5.6 4.1-5.6s4.1 2.4 4.1 5.6c0 1.6-1.1 2.4-2.3 2.4-.8 0-1.2-.5-1.8-.5s-1 .5-1.8.5c-1.2 0-2.3-.8-2.3-2.4Z"/></g></symbol>
+  <symbol id="tpi-fort" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8.5h2.5v2.5H9V8.5h6V11h2.5V8.5H20V21Z"/><path d="M10 21v-4a2 2 0 0 1 4 0v4"/><path d="M12 8.5V3.5l3 1.5-3 1.5"/></g></symbol>
+  <symbol id="tpi-van" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5V8a2 2 0 0 1 2-2h10.5l4.5 4.5h.5a1 1 0 0 1 1 1v5h-1.8"/><path d="M8 16.5h6.8"/><circle cx="5.9" cy="16.8" r="1.9"/><circle cx="17" cy="16.8" r="1.9"/><path d="M15 6v4.5h5"/></g></symbol>
+  <symbol id="tpi-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></g></symbol>
+  <symbol id="tpi-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="m5.5 12.5 4.2 4.2L18.5 7.8"/></symbol>
+  <symbol id="tpi-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="tpi-minus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M5 12h14"/></symbol>
+  <symbol id="tpi-plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="tpi-back" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></symbol>
+  <symbol id="tpi-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></g></symbol>
+  <symbol id="tpi-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6a2.8 2.8 0 0 0 1.8-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.2-.2-.5-.3Z"/></symbol>
+</defs></svg>
+
+<div class="tp" id="tp">
+  <div class="tp-launch">
+    <span class="tp-lbl lg" aria-hidden="true">Plan my trip</span>
+    <button class="tp-spark" type="button" aria-label="Open trip planner" aria-haspopup="dialog" aria-expanded="false"><svg aria-hidden="true"><use href="#tpi-spark"/></svg></button>
+  </div>
+  <div class="tp-scrim" aria-hidden="true"></div>
+  <section class="tp-panel" role="dialog" aria-modal="true" aria-labelledby="tpTitle" tabindex="-1">
+    <div class="tp-grab" aria-hidden="true"><i></i></div>
+    <header class="tp-hd">
+      <span class="tp-gr" aria-hidden="true">G<i>R</i></span>
+      <div><h2 id="tpTitle">Trip Planner</h2><p class="tp-sub" data-step="form"><span class="d">Coast &amp; Western Ghats</span><span class="m">Swipe down to close</span></p></div>
+      <button class="tp-x lg" type="button" aria-label="Close trip planner"><svg aria-hidden="true"><use href="#tpi-x"/></svg></button>
+    </header>
+    <div class="tp-body">
+      <form class="tp-form" novalidate>
+        <div class="tp-f"><p class="tp-q" id="tpQDays">How many days?</p><div class="tp-days" role="radiogroup" aria-labelledby="tpQDays"></div></div>
+        <div class="tp-f"><p class="tp-q" id="tpQStart">Starting from?</p><div class="tp-starts" role="radiogroup" aria-labelledby="tpQStart"></div></div>
+        <div class="tp-f"><p class="tp-q" id="tpQInt">What interests you?</p><div class="tp-ints" role="group" aria-labelledby="tpQInt"></div></div>
+        <div class="tp-f tp-ppl"><p class="tp-q" id="tpQPpl">How many people?</p>
+          <div class="tp-cnt lg" role="group" aria-labelledby="tpQPpl">
+            <button type="button" class="tp-minus" aria-label="Fewer people"><svg aria-hidden="true"><use href="#tpi-minus"/></svg></button>
+            <output class="tp-n" aria-live="polite">4</output>
+            <button type="button" class="tp-plus" aria-label="More people"><svg aria-hidden="true"><use href="#tpi-plus"/></svg></button>
+          </div>
+        </div>
+        <button class="tp-go" type="submit"><svg aria-hidden="true"><use href="#tpi-spark"/></svg><span>Create my trip plan</span></button>
+        <p class="tp-hint" role="alert" hidden>Pick at least one interest</p>
+      </form>
+      <div class="tp-plan" hidden></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const DATA = /*DATA-START*/{
+"neighbours":{"murdeshwar":["honnavar","byndoor"],"honnavar":["murdeshwar","kumta","jog"],"jog":["honnavar","siddapur"],"kumta":["honnavar","gokarna","yana","siddapur"],"gokarna":["kumta","ankola"],"yana":["kumta","sirsi","ankola"],"ankola":["gokarna","karwar","yana"],"karwar":["ankola","dandeli"],"dandeli":["karwar","yellapur"],"yellapur":["dandeli","sirsi"],"sirsi":["yellapur","siddapur","yana"],"siddapur":["sirsi","jog","kumta"],"byndoor":["murdeshwar","kollur","kundapura"],"kollur":["byndoor","kundapura"],"kundapura":["byndoor","kollur","udupi"],"udupi":["kundapura","karkala","mangaluru"],"karkala":["udupi","moodbidri"],"moodbidri":["karkala","mangaluru","dharmasthala"],"mangaluru":["udupi","moodbidri","dharmasthala"],"dharmasthala":["moodbidri","mangaluru","subramanya"],"subramanya":["dharmasthala"]},
+"places":[
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Murdeshwar Temple & Shiva Statue","category":"temple","hours":2,"description":"Giant seated Shiva statue and the tall Raja Gopura on Kanduka hill, with the sea on three sides.","note":"Lift to the top of the gopura; dress modestly."},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Murdeshwar Beach","category":"beach","hours":1.5,"description":"Rocky-edged beach right below the temple hill.","note":"Swim only where lifeguards allow."},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Netrani Island","category":"island","hours":4,"description":"Small island off Murdeshwar known for scuba diving and snorkelling over coral reefs.","note":"Dives depend on sea conditions and season."},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Bhatkal Lighthouse","category":"viewpoint","hours":1,"description":"Small hill near Bhatkal harbour with sea and harbour views.","note":""},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Chandranatha Basadi, Bhatkal","category":"heritage","hours":1,"description":"Old Jain basadi in Bhatkal town.","note":""},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Hadin Eco Beach","category":"beach","hours":1.5,"description":"Park-like beach campus with picnic spots near Bhatkal.","note":"Entry fee."},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Bheemeshwara Temple & Falls","category":"waterfall","hours":4,"description":"Forest temple and waterfall off the Jog Falls road.","note":"Jeep, bike or trek access; best July–December."},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Nastaar Beach","category":"beach","hours":1,"description":"Quiet beach with a huge rock, opposite Bhatkal lighthouse.","note":""},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Idagunji Maha Ganapati Temple","category":"temple","hours":1.5,"description":"Much-visited Ganapati temple a short drive inland from Honnavar.","note":"Long queues on weekends."},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Kasarkod Eco Beach","category":"beach","hours":1.5,"description":"Clean, Blue Flag certified beach near Honnavar.","note":""},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Apsarakonda Falls & Beach","category":"waterfall","hours":1.5,"description":"Small waterfall, garden and temple beside a quiet beach, about 8 km from Honnavar.","note":""},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Sharavathi Backwaters & Mangrove Boardwalk","category":"nature","hours":2,"description":"Calm backwaters and mangroves where the Sharavathi meets the sea.","note":"Boat rides best in the late afternoon."},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Basavaraja Durga Island Fort","category":"fort","hours":3,"description":"Fortified island in the Arabian Sea off Honnavar.","note":"Boats depend on weather."},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Ramatirtha","category":"temple","hours":0.5,"description":"Sacred spring-fed water tank (pushkarini).","note":""},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Gerusoppa Chaturmukha Basadi","category":"heritage","hours":1.5,"description":"16th-century four-faced Jain temple in the Sharavathi valley.","note":""},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Dhareshwar Beach","category":"beach","hours":1,"description":"Quiet fishing beach beside the highway between Kumta and Honnavar.","note":""},
+{"district":"Nearby (border)","area":"jog","area_town":"Jog","place":"Jog Falls","category":"waterfall","hours":2.5,"description":"One of India's highest plunge waterfalls, where the Sharavathi drops in four streams.","note":"Most water August–November; mist can hide the view."},
+{"district":"Uttara Kannada","area":"jog","area_town":"Jog","place":"Bangara Kusuma Falls","category":"waterfall","hours":2,"description":"Forest waterfall a few km north of Gerusoppa.","note":"Best after the monsoon."},
+{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Mirjan Fort","category":"fort","hours":1.5,"description":"16th-century laterite fort with moats and bastions, about 11 km from Kumta.","note":""},
+{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Dhareshwar Mahadev Temple","category":"temple","hours":1,"description":"Ancient black-stone temple near Kumta.","note":""},
+{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Alvekodi Beach","category":"beach","hours":1,"description":"Secluded, undeveloped beach near Kumta.","note":""},
+{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Burude (Dodmane) Falls","category":"waterfall","hours":3,"description":"Tall forest waterfall on the Siddapur–Kumta road.","note":"Walk to the base; slippery after rain."},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Mahabaleshwar Temple","category":"temple","hours":1.5,"description":"Ancient granite temple of the Atmalinga, facing the sea.","note":"Traditional dress rules apply inside."},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Koti Teertha","category":"temple","hours":0.5,"description":"Sacred temple tank in Gokarna town.","note":""},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Om Beach","category":"beach","hours":2.5,"description":"Beach whose two curved coves together look like the Om symbol.","note":"Avoid swimming near the rocks."},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Kudle Beach","category":"beach","hours":2,"description":"Wide, calm bay with palms and cafes.","note":"Stay for the sunset."},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Half Moon Beach","category":"beach","hours":2,"description":"Quiet crescent cove by cliff trail or boat from Om Beach.","note":"Carry water; basic facilities."},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Paradise Beach","category":"beach","hours":2,"description":"Small secluded cove further along the cliff trail.","note":"Trail or boat only."},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Gokarna Main Beach","category":"beach","hours":1,"description":"Long town beach next to the temple street.","note":""},
+{"district":"Uttara Kannada","area":"yana","area_town":"Kumta","place":"Yana Rocks","category":"nature","hours":3,"description":"Two giant black karst rock peaks (Bhairaveshwara and Mohini) with a cave temple.","note":"Short forest walk; good shoes."},
+{"district":"Uttara Kannada","area":"yana","area_town":"Kumta","place":"Vibhooti Falls","category":"waterfall","hours":2,"description":"Zig-zag forest waterfall reached by a short walk near Yana.","note":"Trails slippery after rain."},
+{"district":"Uttara Kannada","area":"ankola","area_town":"Ankola","place":"Honnebail Beach","category":"beach","hours":1,"description":"Quiet beach near Ankola.","note":""},
+{"district":"Uttara Kannada","area":"ankola","area_town":"Ankola","place":"Donne Falls","category":"waterfall","hours":1.5,"description":"Small waterfall between Karwar and Ankola.","note":"Monsoon to winter only."},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Rabindranath Tagore Beach","category":"beach","hours":1.5,"description":"Karwar's long town beach with a promenade.","note":""},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"INS Chapal Warship Museum","category":"heritage","hours":1,"description":"A real warship turned into a museum on the beach.","note":"Check opening days."},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Rock Garden, Karwar","category":"park","hours":0.5,"description":"Sculpture garden next to the warship museum.","note":""},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Devbagh Beach","category":"beach","hours":2,"description":"Quiet beach where the Kali river meets the sea.","note":"Water sports in season."},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Majali Beach","category":"beach","hours":1,"description":"Long beach north of Karwar towards Goa.","note":""},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Kali River Bridge & Garden","category":"viewpoint","hours":0.5,"description":"River-mouth views; good for sunrise and sunset.","note":""},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Sadashivgad Fort","category":"fort","hours":1,"description":"Old hill fort above the Kali river bridge.","note":"Access may be restricted."},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Kurmagad Island","category":"island","hours":3,"description":"Island off Karwar reached by boat.","note":"Boats depend on permission and weather."},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Oyster Rock Lighthouse","category":"island","hours":3,"description":"Offshore lighthouse seen on Karwar boat trips.","note":"Boat trips only."},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Kali River Rafting","category":"adventure","hours":3,"description":"White-water rafting, kayaking and coracle rides on the Kali river.","note":"Registered operators; season-dependent."},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Dandeli Wildlife Sanctuary (Kali Tiger Reserve)","category":"wildlife","hours":3,"description":"Large protected forest known for hornbills, kingfishers, gaur and deer.","note":"Early-morning safari is best."},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Syntheri Rocks","category":"nature","hours":1.5,"description":"Huge granite monolith carved by the Kaneri river.","note":"Steps down to the river."},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Kavala Caves","category":"nature","hours":2,"description":"Limestone caves with a natural Shiva linga, reached by over 350 steps.","note":"Carry a torch."},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Supa Dam & Backwaters","category":"nature","hours":1.5,"description":"Calm reservoir on the Kali river.","note":"Some areas restricted."},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Ganeshgudi","category":"nature","hours":2,"description":"Quiet forest village near Supa, known for birdwatching.","note":""},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Shiroli Peak","category":"viewpoint","hours":1.5,"description":"Dandeli's highest point, with Western Ghats views at sunset.","note":""},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Moulangi Eco Park","category":"park","hours":1.5,"description":"Family eco park among bamboo groves and forest streams.","note":""},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Anshi National Park","category":"wildlife","hours":3,"description":"Evergreen forest park in Joida taluk, part of the Kali Tiger Reserve.","note":""},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Ulavi Channabasaveshwara Temple","category":"temple","hours":1.5,"description":"Pilgrimage temple deep in the Joida forests.","note":""},
+{"district":"Nearby (border)","area":"dandeli","area_town":"Dandeli","place":"Dudhsagar Falls","category":"waterfall","hours":4,"description":"Tall Mandovi river falls on the Goa border, crossed by the Konkan railway line.","note":"Access and permits vary by season."},
+{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Magod Falls","category":"waterfall","hours":2,"description":"Two-step fall of the Bedthi river into a deep forest gorge, about 17 km from Yellapur.","note":"Viewpoint only."},
+{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Sathodi Falls","category":"waterfall","hours":2.5,"description":"Wide forest waterfall into a clear pool, about 32 km from Yellapur.","note":"Go early."},
+{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Lalguli Falls","category":"waterfall","hours":1.5,"description":"Kali river falls about 13 km from Yellapur.","note":""},
+{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Jenukallu Gudda","category":"viewpoint","hours":1.5,"description":"Western Ghats peak in evergreen forest, about 17 km from Yellapur.","note":""},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sri Marikamba Temple","category":"temple","hours":1,"description":"Sirsi's famous goddess temple, known for its painted walls and big festival.","note":"Early morning is calmest."},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sri Mahaganapathi Temple, Sirsi","category":"temple","hours":0.5,"description":"Temple with a large Ganesha idol near the town centre.","note":""},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sahasralinga","category":"temple","hours":1.5,"description":"Hundreds of lingas carved on the rocks of the Shalmala river.","note":"Best when water is low."},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Banavasi Madhukeshwara Temple","category":"heritage","hours":1.5,"description":"Ancient carved temple in Banavasi, the old Kadamba capital.","note":""},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Shivaganga Falls","category":"waterfall","hours":2,"description":"Forest waterfall near Sonda dropping into a deep valley.","note":"Good grip shoes."},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Benne Hole Falls","category":"waterfall","hours":2.5,"description":"Forceful, creamy-white forest cascade near Kasage, off the Kumta road.","note":"Trek in; after monsoon."},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Swarnavalli Matha, Sonda","category":"temple","hours":1,"description":"Historic matha in the Sonda forests.","note":""},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Manjuguni Venkataramana Temple","category":"temple","hours":1,"description":"Hill temple known as the \"Tirupati of Karnataka\".","note":""},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Kailasa Gudda","category":"viewpoint","hours":1,"description":"Hill viewpoint over the forests near Sirsi.","note":""},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Gudavi Bird Sanctuary","category":"wildlife","hours":2,"description":"Lake sanctuary with many water birds.","note":"Best June–December."},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Muregar Falls","category":"waterfall","hours":1.5,"description":"Forest waterfall near Muregar village.","note":""},
+{"district":"Uttara Kannada","area":"siddapur","area_town":"Siddapur","place":"Unchalli (Lushington) Falls","category":"waterfall","hours":2.5,"description":"Tall Aghanashini waterfall in deep forest.","note":"Walk down to the viewpoint."},
+{"district":"Uttara Kannada","area":"siddapur","area_town":"Siddapur","place":"Keppa Jog","category":"waterfall","hours":2,"description":"A smaller cousin of Jog Falls in the forest.","note":""},
+{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Ottinene Viewpoint & Beach","category":"viewpoint","hours":1.5,"description":"Hilltop view where a river meets the Arabian Sea.","note":""},
+{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Someshwara Beach & Temple, Byndoor","category":"beach","hours":1,"description":"Beach with a temple near Ottinene.","note":""},
+{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Koosalli Falls","category":"waterfall","hours":4,"description":"Forest falls near Byndoor reached by a 4 km trek.","note":"Trek; after monsoon."},
+{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Haklamane Falls","category":"waterfall","hours":2,"description":"Falls between Byndoor and Kollur.","note":""},
+{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Kollur Mookambika Temple","category":"temple","hours":2,"description":"Famous temple of Goddess Mookambika at the foot of the Kodachadri hills.","note":"Queues on festivals."},
+{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Belkal Theertha Falls","category":"waterfall","hours":4,"description":"Forest waterfall near Kollur reached by a 3 km trek.","note":"Best in the rainy season."},
+{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Arisina Gundi Falls","category":"waterfall","hours":3,"description":"Forest waterfall near Kollur.","note":"Trek."},
+{"district":"Nearby (border)","area":"kollur","area_town":"Kollur","place":"Kodachadri Peak","category":"viewpoint","hours":5,"description":"High Western Ghats peak reached by jeep or trek from Kollur.","note":"Long day; weather-dependent."},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Maravanthe Beach","category":"beach","hours":1,"description":"Highway on a thin strip between the sea and the Souparnika river.","note":"Strong waves on the sea side."},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Kodi Beach & Sea Walk","category":"beach","hours":1.5,"description":"River-mouth beach and sea walk near Kundapura.","note":""},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Gangolli End Point & Lighthouse","category":"viewpoint","hours":1,"description":"Quiet river-mouth viewpoint and lighthouse rocks.","note":""},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Anegudde Vinayaka Temple","category":"temple","hours":1,"description":"Well-known Ganesha temple at Kumbashi.","note":""},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Kamalashile Brahmi Durgaparameshwari Temple","category":"temple","hours":1,"description":"Temple by the Kubja river.","note":""},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Uppinakudru Puppet House","category":"heritage","hours":1,"description":"Yakshagana puppet exhibits near Kundapura.","note":""},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Gulvadi Dam","category":"nature","hours":0.5,"description":"Scenic dam near Kundapura.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Sri Krishna Matha","category":"temple","hours":1.5,"description":"Famous 13th-century Krishna temple founded by Madhvacharya.","note":"Free temple meal at lunchtime."},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Anantheshwara & Chandramouleshwara Temples","category":"temple","hours":0.5,"description":"Ancient Shiva temples beside the Krishna Matha.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Malpe Beach","category":"beach","hours":1.5,"description":"Lively beach next to a big fishing harbour.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"St Mary's Island","category":"island","hours":2.5,"description":"Small islands with hexagonal basalt rock columns, by boat from Malpe.","note":"Boats run in season."},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Daria Bahadurgad Fort","category":"fort","hours":1.5,"description":"Ruined island fort about 2 km off Malpe.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kaup Beach & Lighthouse","category":"beach","hours":1,"description":"Long beach with an old lighthouse on the rocks and Kapu fort nearby.","note":"Go for sunset."},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Mattu Beach","category":"beach","hours":1,"description":"Secluded beach at the end of the Udyavara drive.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Padubidri Blue Flag Beach","category":"beach","hours":1.5,"description":"Blue Flag certified beach with lifeguards and facilities.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kodi Bengre Houseboats","category":"nature","hours":2,"description":"Houseboat rides on the backwaters near Udupi.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Manipal Lake & End Point","category":"viewpoint","hours":1,"description":"Lake and valley viewpoint in Manipal.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Hasta Shilpa Heritage Village, Manipal","category":"heritage","hours":2,"description":"Heritage village museum with old houses and crafts.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kemmannu Hanging Bridge","category":"nature","hours":1,"description":"Suspension bridge over the Swarna river with kayaking nearby.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Pajaka Kshetra","category":"temple","hours":1,"description":"Birthplace of Madhvacharya, with hilltop temples.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kunjarugiri Durga Temple","category":"temple","hours":1,"description":"Hilltop temple with 360° views near Udupi.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Barkur","category":"heritage","hours":1.5,"description":"Old Tulu capital with ancient temples, basadis and fort ruins.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Mandarthi Durgaparameshwari Temple","category":"temple","hours":1,"description":"Popular goddess temple north of Udupi.","note":""},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Jumadi Island","category":"island","hours":3,"description":"Forested island by boat from Padubidri.","note":""},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Karkala Gommateshwara (Bahubali) Statue","category":"heritage","hours":1,"description":"Giant monolithic Bahubali statue on a rock hill.","note":""},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Chaturmukha Basadi, Karkala","category":"heritage","hours":0.5,"description":"Late-16th-century four-faced Jain temple.","note":""},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Attur St Lawrence Church","category":"heritage","hours":0.5,"description":"Church from 1759, known for its annual festival.","note":""},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Varanga Lake Basadi","category":"heritage","hours":1,"description":"Jain basadi in the middle of a lake near Hebri.","note":""},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Kudlu Falls","category":"waterfall","hours":3,"description":"Forest waterfall near Hebri, reached by a moderate trek.","note":""},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Jomlu Theertha Falls","category":"waterfall","hours":1.5,"description":"Small, safe waterfall near Belve.","note":""},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Someshwara Wildlife Sanctuary","category":"wildlife","hours":3,"description":"Western Ghats forest sanctuary near Hebri.","note":""},
+{"district":"Nearby (border)","area":"karkala","area_town":"Karkala","place":"Agumbe Sunset Point","category":"viewpoint","hours":2,"description":"Rain-forest hill village with a famous sunset view.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Panambur Beach","category":"beach","hours":1.5,"description":"Popular, well-kept beach near the port, with water sports.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Tannirbhavi Beach","category":"beach","hours":1.5,"description":"Calm beach with sunset views and a tree park.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Surathkal Beach & Lighthouse","category":"beach","hours":1,"description":"Rocky beach with a lighthouse.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Sasihithlu Beach","category":"beach","hours":1,"description":"Quiet river-mouth beach through an acacia grove.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Ullal & Someshwara Beach","category":"beach","hours":1.5,"description":"Beaches south of the city with rocky outcrops.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kadri Manjunatha Temple","category":"temple","hours":1,"description":"Hilltop temple said to date from the 10th–11th century.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kudroli Gokarnanatha Temple","category":"temple","hours":1,"description":"Colourful temple famous for its Navaratri (Dasara) celebrations.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Mangaladevi Temple","category":"temple","hours":0.5,"description":"Temple of Goddess Mangaladevi that gives the city its name.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"St Aloysius Chapel","category":"heritage","hours":1,"description":"Chapel with walls and ceiling covered in old paintings.","note":"Photography rules apply."},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Milagres Church","category":"heritage","hours":0.5,"description":"One of Mangaluru's oldest churches.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Sultan Battery","category":"fort","hours":1,"description":"Black-stone watchtower built by Tipu Sultan by the river.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Ullal Dargah","category":"heritage","hours":0.5,"description":"Respected Sufi shrine at Ullal.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Pilikula Nisargadhama","category":"park","hours":3,"description":"Nature park with zoo, lake, science centre and heritage village.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Bejai Museum","category":"heritage","hours":1,"description":"City museum in a ship-shaped building.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kateel Durgaparameshwari Temple","category":"temple","hours":1,"description":"Temple on an islet in the Nandini river.","note":"Crowded on festivals."},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Batapady Mangrove Boat Ride","category":"nature","hours":1.5,"description":"Boat ride under mangroves south of the city.","note":""},
+{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Saavira Kambada Basadi","category":"heritage","hours":1,"description":"Thousand-pillar Jain temple from 1430.","note":""},
+{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Moodbidri Jain Basadis","category":"heritage","hours":1,"description":"Cluster of old Jain temples (basadis) along Basadi Road.","note":""},
+{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Venur Bahubali Statue","category":"heritage","hours":1,"description":"Monolithic Bahubali statue by the Phalguni river.","note":""},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Dharmasthala Manjunatha Temple","category":"temple","hours":2,"description":"Major pilgrimage temple known for its free meals and charity.","note":"Traditional dress; long queues."},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Manjusha Car Museum, Dharmasthala","category":"heritage","hours":1,"description":"Vintage car and heritage museum.","note":""},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Dharmasthala Bahubali Hill","category":"heritage","hours":0.5,"description":"Monolithic Bahubali statue on a hill.","note":""},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Sowthadka Ganapathi Temple","category":"temple","hours":0.5,"description":"Open-air Ganesha shrine hung with bells.","note":""},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Jamalabad (Gadaikallu) Fort","category":"fort","hours":4,"description":"Hill fort on a steep rock near Belthangady.","note":"Steep climb; check if open before going."},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Bandaje Falls","category":"waterfall","hours":6,"description":"Tall forest waterfall reached by a long trek.","note":"Long trek; go with a local guide."},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Ermayi Falls","category":"waterfall","hours":2,"description":"Forest waterfall near Kajoor.","note":""},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Didupe Falls","category":"waterfall","hours":2,"description":"Forest waterfall reached by an easy 2 km walk.","note":""},
+{"district":"Dakshina Kannada","area":"subramanya","area_town":"Subramanya","place":"Kukke Subramanya Temple","category":"temple","hours":2,"description":"Major pilgrimage temple of Lord Subramanya.","note":"Crowded on weekends."},
+{"district":"Dakshina Kannada","area":"subramanya","area_town":"Subramanya","place":"Kumara Parvatha Trek","category":"adventure","hours":10,"description":"One of Karnataka's toughest treks, starting at Kukke.","note":"Forest permit; full day."},
+{"district":"Dakshina Kannada","area":"subramanya","area_town":"Puttur","place":"Puttur Mahalingeshwara Temple","category":"temple","hours":0.5,"description":"Popular Shiva temple in Puttur.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Bantwal","place":"Karinjeshwara Hill Temple","category":"temple","hours":1.5,"description":"Hilltop temple near Bantwal with steps and wide views.","note":""},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Bantwal","place":"Vitla Panchalingeshwara Temple","category":"temple","hours":0.5,"description":"Old Shiva temple in Vitla.","note":""}
+]}/*DATA-END*/;
+
+  // --- planner engine (pure, no DOM) ---
+  var Planner = (function(DATA){
+    var INTERESTS = [
+      {k:'waterfalls', label:'Waterfalls', short:'Waterfalls', icon:'waterfall', cats:['waterfall']},
+      {k:'beaches', label:'Beaches & Islands', short:'Beaches', icon:'beach', cats:['beach','island']},
+      {k:'temples', label:'Temples & Heritage', short:'Temples', icon:'temple', cats:['temple','heritage']},
+      {k:'nature', label:'Nature & Adventure', short:'Nature', icon:'nature', cats:['nature','viewpoint','park','adventure']},
+      {k:'wildlife', label:'Wildlife', short:'Wildlife', icon:'wildlife', cats:['wildlife']},
+      {k:'forts', label:'Historical Forts', short:'Forts', icon:'fort', cats:['fort']}
+    ];
+    var STARTS = [
+      {k:'murdeshwar', label:'Murdeshwar', area:'murdeshwar'},
+      {k:'udupi', label:'Udupi', area:'udupi'},
+      {k:'mangaluru', label:'Mangaluru Airport', area:'mangaluru'},
+      {k:'goa', label:'Goa', area:'karwar'},
+      {k:'hubballi', label:'Hubballi Airport', area:'yellapur'}
+    ];
+    // long treks, permits or restricted access
+    var HARD = {};
+    ['Kumara Parvatha Trek','Bandaje Falls','Koosalli Falls','Belkal Theertha Falls','Arisina Gundi Falls','Kudlu Falls','Kodachadri Peak',
+     'Jamalabad (Gadaikallu) Fort','Bheemeshwara Temple & Falls','Dudhsagar Falls','Kurmagad Island','Oyster Rock Lighthouse'].forEach(function(n){ HARD[n] = 1; });
+    var BUDGET = 7.5, MAX_STOPS = 4, WHOLE_DAY = 6;
+    var CAT = {temple:['temple','temples'], beach:['beach','beaches'], waterfall:['waterfall','waterfalls'], heritage:['heritage','heritage'],
+      viewpoint:['viewpoint','viewpoints'], nature:['nature','nature'], fort:['fort','forts'], island:['island','islands'],
+      wildlife:['wildlife','wildlife'], park:['park','parks'], adventure:['adventure','adventure']};
+    var GHATS = {sirsi:1, siddapur:1, yellapur:1, dandeli:1};
+    var TIPS = ['Start early — our driver knows these roads.','Swim only at safe, flagged spots; avoid rocks and strong currents.',
+      'Network is weak near forest waterfalls; carry some cash.','Scuba, rafting, island boats and treks depend on season and weather.'];
+    var NUM = ['one','two','three','four'];
+
+    var NB = DATA.neighbours || {}, PLACES = DATA.places || [];
+    var AREAS = Object.keys(NB).sort();
+    var ORDER = {}; PLACES.forEach(function(p, i){ ORDER[p.place] = i; });
+    function cmp(a, b){ return a < b ? -1 : a > b ? 1 : 0; }
+    function majority(list){
+      var c = {}, best = null;
+      list.forEach(function(x){ c[x] = (c[x] || 0) + 1; if (best === null || c[x] > c[best]) best = x; });
+      return best;
+    }
+    var AREA = {};
+    AREAS.forEach(function(a){
+      var ps = PLACES.filter(function(p){ return p.area === a; });
+      AREA[a] = {
+        town: majority(ps.map(function(p){ return p.area_town; })) || a,
+        district: majority(ps.map(function(p){ return p.district; }).filter(function(d){ return d.indexOf('Nearby') < 0; })) || 'Uttara Kannada'
+      };
+    });
+    function foods(area){
+      var d = AREA[area].district;
+      if (d === 'Udupi') return ['Udupi vegetarian thali','Goli baje and filter coffee','Masala dosa'];
+      if (d === 'Dakshina Kannada') return ['Kori rotti','Mangalorean fish curry','Mangalore buns'];
+      return GHATS[area] ? ['Jolada rotti with ennegai','Kadubu with coconut chutney'] : ['Neer dosa with fish curry','Kadubu with coconut chutney'];
+    }
+    function hopsFrom(start){
+      var h = {}, q = [start]; h[start] = 0;
+      while (q.length){ var a = q.shift(); (NB[a] || []).forEach(function(b){ if (h[b] === undefined){ h[b] = h[a] + 1; q.push(b); } }); }
+      return h;
+    }
+    function vehicleFor(n){
+      return n <= 4 ? '5-seater family car' : n <= 6 ? '7-seater family MUV' : n <= 10 ? '11-seater tempo traveller' : 'two or more vehicles';
+    }
+    function joinAnd(list){ return list.length < 2 ? (list[0] || '') : list.slice(0, -1).join(', ') + ' & ' + list[list.length - 1]; }
+    function joinWords(list){ return list.length < 2 ? (list[0] || '') : list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1]; }
+    function clamp(v, lo, hi, dflt){ v = parseInt(v, 10); return isNaN(v) ? dflt : Math.min(hi, Math.max(lo, v)); }
+
+    function plan(input){
+      var D = clamp(input.days, 1, 4, 2), N = clamp(input.people, 1, 40, 4);
+      var start = STARTS.filter(function(s){ return s.k === input.start; })[0] || STARTS[0];
+      var picked = INTERESTS.filter(function(i){ return (input.interests || []).indexOf(i.k) >= 0; });
+      var cats = {}; picked.forEach(function(i){ i.cats.forEach(function(c){ cats[c] = 1; }); });
+      var hardOK = (input.interests || []).indexOf('nature') >= 0 && N < 8;
+      var hops = hopsFrom(start.area), maxHop = D <= 2 ? 1 : 2;
+      var allowed = AREAS.filter(function(a){ return hops[a] !== undefined && hops[a] <= maxHop; });
+      var isAllowed = {}; allowed.forEach(function(a){ isAllowed[a] = 1; });
+      var used = {};
+
+      function match(p){ return !!cats[p.category]; }
+      function pts(p){ return match(p) ? 20 : 2; }            // 2 and 0.2, kept as integers so ties are exact
+      function usable(p){ return !used[p.place] && (!HARD[p.place] || hardOK); }
+      function rem(a){ return PLACES.filter(function(p){ return p.area === a && usable(p); }); }
+      function remScore(a){ return rem(a).reduce(function(s, p){ return s + pts(p); }, 0); }
+      function remMatch(a){ return rem(a).filter(match).length; }
+      function byArea(x, y){ return remScore(y) - remScore(x) || (hops[x] || 0) - (hops[y] || 0) || cmp(x, y); }
+      function byPlace(x, y){ return pts(y) - pts(x) || y.hours - x.hours || ORDER[x.place] - ORDER[y.place]; }
+
+      function nextArea(prev, visited){
+        var near = (NB[prev] || []).filter(function(a){ return isAllowed[a] && !visited[a]; }).sort(byArea);
+        if (near.length && remMatch(near[0]) >= 2) return near[0];
+        if (remMatch(prev) >= 2) return prev;                 // stay: it still has good matching places
+        var all = allowed.filter(function(a){ return !visited[a] && rem(a).length; }).sort(byArea);
+        if (all.length && remMatch(all[0]) >= 1) return all[0];
+        if (near.length && rem(near[0]).length) return near[0];
+        if (all.length) return all[0];
+        var any = allowed.filter(function(a){ return rem(a).length; }).sort(byArea);
+        return any[0] || prev;
+      }
+
+      function fillDay(area, isLast, visited){
+        var stops = [], hrs = 0, hard = 0, areas = [area], general = false;
+        function whole(){ return stops.some(function(s){ return s.hours >= WHOLE_DAY; }); }
+        function canAdd(p){
+          if (used[p.place] || stops.length >= MAX_STOPS || whole()) return false;
+          if (p.hours >= WHOLE_DAY) return stops.length === 0;
+          if (hrs + p.hours > BUDGET) return false;
+          if (HARD[p.place] && hard >= 1) return false;
+          return true;
+        }
+        function add(p){ stops.push(p); used[p.place] = 1; hrs += p.hours; if (HARD[p.place]) hard++; if (!match(p)) general = true; }
+        function takeMatching(a){
+          var cand = rem(a).filter(match).sort(byPlace), later = [];
+          cand.forEach(function(p){
+            if (!canAdd(p)) return;
+            if (p.category === 'beach'){
+              var b = stops.filter(function(s){ return s.category === 'beach'; }).length;
+              var o = stops.filter(function(s){ return s.category !== 'beach' && match(s); }).length;
+              var other = cand.some(function(q){ return q !== p && q.category !== 'beach' && canAdd(q); });
+              if (b > o && other){ later.push(p); return; }   // keep beaches from piling up when other interests exist
+            }
+            add(p);
+          });
+          later.forEach(function(p){ if (canAdd(p)) add(p); });
+        }
+        function takeGeneral(a){
+          rem(a).sort(byPlace).forEach(function(p){ if ((stops.length < 2 || hrs < 4) && canAdd(p)) add(p); });
+        }
+
+        takeMatching(area);
+        var nextA = isLast ? null : nextArea(area, visited);
+        if (!whole() && stops.length < MAX_STOPS && BUDGET - hrs >= 1){
+          var ons = (NB[area] || []).filter(function(a){
+            return isAllowed[a] && !visited[a] && a !== nextA && rem(a).some(function(p){ return match(p) && canAdd(p); });
+          }).sort(byArea);
+          if (ons.length){ areas.push(ons[0]); takeMatching(ons[0]); }
+        }
+        var matched = stops.filter(match).length;
+        if (matched < 2 || (hrs < 4 && stops.length < MAX_STOPS)){
+          areas.forEach(takeGeneral);
+          if (stops.length < 2 && areas.length < 2){
+            var nb = (NB[area] || []).filter(function(a){ return isAllowed[a] && a !== nextA && rem(a).some(canAdd); }).sort(byArea)[0]
+                  || (NB[area] || []).filter(function(a){ return rem(a).some(canAdd); }).sort(byArea)[0];
+            if (nb){ areas.push(nb); takeGeneral(nb); }
+          }
+        }
+        // order: by area as visited, and no two beaches in a row when something else is there to put between them
+        var ordered = [], prevBeach = false;
+        areas.forEach(function(a){
+          var rest = stops.filter(function(s){ return s.area === a; });
+          while (rest.length){
+            var beaches = rest.filter(function(s){ return s.category === 'beach'; }).length;
+            var i = prevBeach ? rest.findIndex(function(s){ return s.category !== 'beach'; })
+                  : beaches > rest.length - beaches ? rest.findIndex(function(s){ return s.category === 'beach'; }) : 0;
+            if (i < 0) i = 0;
+            var s = rest.splice(i, 1)[0]; ordered.push(s); prevBeach = s.category === 'beach';
+          }
+        });
+        var usedAreas = areas.filter(function(a){ return ordered.some(function(s){ return s.area === a; }); });
+        return {area: area, areas: usedAreas, stops: ordered, hours: hrs, general: general, matched: matched};
+      }
+
+      var visited = {}, days = [], prev = null, foodUsed = {};
+      for (var d = 0; d < D; d++){
+        var area = d === 0 ? start.area : nextArea(prev, visited);
+        visited[area] = 1;
+        var day = fillDay(area, d === D - 1, visited);
+        // theme: day town + its main category (interests first)
+        var pool = day.stops.filter(match); if (!pool.length) pool = day.stops;
+        var count = {}, main = null;
+        pool.forEach(function(s){ count[s.category] = (count[s.category] || 0) + 1; });
+        pool.forEach(function(s){ if (main === null || count[s.category] > count[main]) main = s.category; });
+        var town = AREA[area].town, words = CAT[main] || [main, main];
+        day.theme = main ? town + ' ' + words[count[main] > 1 ? 1 : 0] : town;
+        var lastArea = day.stops.length ? day.stops[day.stops.length - 1].area : area;
+        day.night = d === D - 1 ? null : AREA[lastArea].town;
+        var opts = foods(area), yday = days.length ? days[days.length - 1].food : null;
+        var dish = opts.filter(function(f){ return f !== yday; }).sort(function(x, y){ return (foodUsed[x] || 0) - (foodUsed[y] || 0) || opts.indexOf(x) - opts.indexOf(y); })[0] || opts[0];
+        foodUsed[dish] = (foodUsed[dish] || 0) + 1; day.food = dish;
+        day.towns = day.areas.map(function(a){ return AREA[a].town; }).filter(function(t, i, arr){ return arr.indexOf(t) === i; });
+        day.n = d + 1;
+        days.push(day); prev = area;
+      }
+
+      var shorts = picked.map(function(i){ return i.short; });
+      var title = D + (D > 1 ? ' Days: ' : ' Day: ') + joinAnd(shorts) + ' from ' + start.label;
+      var runs = [];
+      days.forEach(function(dy){
+        var key = dy.towns.join('|'), last = runs[runs.length - 1];
+        if (last && last.key === key) last.to = dy.n; else runs.push({key: key, towns: dy.towns, from: dy.n, to: dy.n});
+      });
+      var summary = D === 1 ? joinWords(days[0].towns) + ' in one day.'
+        : runs.map(function(r){
+            var when = r.from === r.to ? 'day ' + NUM[r.from - 1]
+              : r.to - r.from === 1 ? 'days ' + NUM[r.from - 1] + ' and ' + NUM[r.to - 1] : 'days ' + NUM[r.from - 1] + ' to ' + NUM[r.to - 1];
+            return joinWords(r.towns) + ' on ' + when;
+          }).join(', ') + '.';
+      var waterfalls = (input.interests || []).indexOf('waterfalls') >= 0;
+      var bestTime = waterfalls ? 'Waterfalls are fullest August–November; October–March is pleasant overall.'
+                                : 'October to March, after the monsoon, is the most pleasant time.';
+      var vehicle = vehicleFor(N);
+      var wa = ['Hi GR Tours & Travels, I\'d like this trip:', title, 'From: ' + start.label + ' · People: ' + N + ' · Vehicle: ' + vehicle];
+      days.forEach(function(dy){
+        wa.push('Day ' + dy.n + ': ' + dy.stops.map(function(s){ return s.place; }).join(', ') + (dy.night ? ' (night: ' + dy.night + ')' : ' (drop back at ' + start.label + ')'));
+      });
+      wa.push('Please share the price and available dates.');
+      return {title: title, summary: summary, bestTime: bestTime, days: days, vehicle: vehicle, people: N, start: start, nDays: D,
+              tips: TIPS, waText: wa.join('\n'), interests: picked.map(function(i){ return i.k; })};
+    }
+    return {plan: plan, INTERESTS: INTERESTS, STARTS: STARTS, CAT: CAT, HARD: HARD, AREA: AREA, hopsFrom: hopsFrom};
+  })(DATA);
+  // --- end planner engine ---
+
+  var root = document.getElementById('tp');
+  if (!root) return;
+  var $ = function(s){ return root.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(root.querySelectorAll(s)); };
+  var launch = $('.tp-launch'), spark = $('.tp-spark'), lbl = $('.tp-lbl'), scrim = $('.tp-scrim'), panel = $('.tp-panel'), body = $('.tp-body');
+  var form = $('.tp-form'), planEl = $('.tp-plan'), title = $('.tp-hd h2'), sub = $('.tp-sub'), hint = $('.tp-hint');
+  var daysEl = $('.tp-days'), startsEl = $('.tp-starts'), intsEl = $('.tp-ints'), nOut = $('.tp-n'), minus = $('.tp-minus'), plus = $('.tp-plus');
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var phoneMQ = matchMedia('(max-width: 639px)');
+  var WA = '919620936143', KEY = 'grTripPlanner.v1';
+
+  var state = {days: 2, start: 'murdeshwar', interests: ['waterfalls', 'beaches'], people: 4};
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved && typeof saved === 'object'){
+      if ([1,2,3,4].indexOf(saved.days) >= 0) state.days = saved.days;
+      if (Planner.STARTS.some(function(s){ return s.k === saved.start; })) state.start = saved.start;
+      if (Array.isArray(saved.interests)) state.interests = saved.interests.filter(function(k){ return Planner.INTERESTS.some(function(i){ return i.k === k; }); });
+      if (saved.people >= 1 && saved.people <= 40) state.people = Math.round(saved.people);
+    }
+  } catch (e) {}
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function icon(name, cls){ return '<svg class="' + (cls || 'ico') + '" aria-hidden="true"><use href="#tpi-' + name + '"/></svg>'; }
+
+  // ---- form ----
+  daysEl.innerHTML = [1,2,3,4].map(function(n){ return '<button type="button" role="radio" data-v="' + n + '" aria-label="' + n + (n > 1 ? ' days' : ' day') + '">' + n + '</button>'; }).join('');
+  startsEl.innerHTML = Planner.STARTS.map(function(s){ return '<button type="button" role="radio" data-v="' + s.k + '">' + esc(s.label) + '</button>'; }).join('');
+  intsEl.innerHTML = Planner.INTERESTS.map(function(i){
+    return '<button type="button" role="checkbox" data-v="' + i.k + '"><span class="tp-ck">' + icon('check') + '</span>' + icon(i.icon) + '<span>' + esc(i.label) + '</span></button>';
+  }).join('');
+
+  function paintRadio(group, val){
+    Array.prototype.forEach.call(group.children, function(b){
+      var on = b.getAttribute('data-v') === String(val);
+      b.setAttribute('aria-checked', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1;
+      b.className = on ? 'lg-on' : 'lg';
+    });
+  }
+  function paint(){
+    paintRadio(daysEl, state.days); paintRadio(startsEl, state.start);
+    Array.prototype.forEach.call(intsEl.children, function(b){
+      var on = state.interests.indexOf(b.getAttribute('data-v')) >= 0;
+      b.setAttribute('aria-checked', on ? 'true' : 'false'); b.className = on ? 'lg-on' : 'lg';
+    });
+    nOut.textContent = state.people; minus.disabled = state.people <= 1; plus.disabled = state.people >= 40;
+  }
+  function radioKeys(group, set){
+    group.addEventListener('keydown', function(e){
+      var keys = {ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1};
+      if (!keys[e.key]) return;
+      e.preventDefault();
+      var items = Array.prototype.slice.call(group.children), i = items.indexOf(document.activeElement);
+      var nx = items[(i + keys[e.key] + items.length) % items.length];
+      set(nx.getAttribute('data-v')); nx.focus();
+    });
+  }
+  function setDays(v){ state.days = parseInt(v, 10); paint(); save(); }
+  function setStart(v){ state.start = v; paint(); save(); }
+  daysEl.addEventListener('click', function(e){ var b = e.target.closest('button'); if (b) setDays(b.getAttribute('data-v')); });
+  startsEl.addEventListener('click', function(e){ var b = e.target.closest('button'); if (b) setStart(b.getAttribute('data-v')); });
+  radioKeys(daysEl, setDays); radioKeys(startsEl, setStart);
+  intsEl.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    var k = b.getAttribute('data-v'), i = state.interests.indexOf(k);
+    if (i >= 0) state.interests.splice(i, 1); else state.interests.push(k);
+    if (state.interests.length) hint.hidden = true;
+    paint(); save();
+  });
+  minus.addEventListener('click', function(){ state.people = Math.max(1, state.people - 1); paint(); save(); });
+  plus.addEventListener('click', function(){ state.people = Math.min(40, state.people + 1); paint(); save(); });
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!state.interests.length){
+      hint.hidden = false;
+      intsEl.classList.remove('shake'); void intsEl.offsetWidth; intsEl.classList.add('shake');
+      return;
+    }
+    showPlan(Planner.plan(state));
+  });
+  intsEl.addEventListener('animationend', function(){ intsEl.classList.remove('shake'); });
+
+  // ---- plan ----
+  var current = null;
+  function hrs(h){ return '≈ ' + (Math.round(h * 10) / 10) + ' h'; }
+  function showPlan(p){
+    current = p;
+    var k = 0, html = '';
+    html += '<h3 class="tp-pt" tabindex="-1">' + esc(p.title) + '</h3>';
+    html += '<p class="tp-ps">' + esc(p.summary.charAt(0).toUpperCase() + p.summary.slice(1)) + '</p>';
+    html += '<p class="tp-best">' + icon('sun') + '<span><b>Best time:</b> ' + esc(p.bestTime) + '</span></p>';
+    p.days.forEach(function(d){
+      html += '<section class="tp-day"><div class="tp-dh"><h4>Day ' + d.n + ': ' + esc(d.theme) + '</h4><span class="tp-pill">DAY ' + d.n + '</span></div>';
+      if (d.general) html += '<p class="tp-fill">Added nearby highlights</p>';
+      html += '<ol class="tp-stops">';
+      d.stops.forEach(function(s){
+        html += '<li class="tp-stop" style="--i:' + (k++) + '"><span class="tp-si">' + icon(s.category) + '</span><div>' +
+          '<p class="tp-sn">' + esc(s.place) + '<span class="tp-cat">' + esc(s.category) + '</span><span class="tp-hr">' + hrs(s.hours) + '</span></p>' +
+          '<p class="tp-sd">' + esc(s.description) + '</p>' + (s.note ? '<p class="tp-sv">💡 ' + esc(s.note) + '</p>' : '') + '</div></li>';
+      });
+      html += '</ol>';
+      html += '<p class="tp-meta">' + (d.night ? '<b>Night stay:</b> ' + esc(d.night) + ' — rooms arranged on request' : '<b>Drop back at</b> ' + esc(p.start.label)) +
+              '<br><b>Local food:</b> ' + esc(d.food) + '</p></section>';
+    });
+    html += '<p class="tp-veh lg">' + icon('van') + '<span>Suggested: <b>' + esc(p.vehicle) + '</b> for ' + p.people + (p.people > 1 ? ' people' : ' person') + '</span></p>';
+    html += '<div class="tp-tips"><h4>Travel tips</h4><ul>' + p.tips.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
+    html += '<a class="tp-book" href="https://wa.me/' + WA + '?text=' + encodeURIComponent(p.waText) + '" target="_blank" rel="noopener"><span class="tp-wa">' + icon('wa', '') + '</span><span>Book this plan on WhatsApp</span></a>';
+    html += '<div class="tp-row"><button type="button" class="lg tp-again">' + icon('back', '') + 'Plan another trip</button><button type="button" class="lg tp-copy">' + icon('copy', '') + '<span>Copy plan</span></button></div>';
+    html += '<p class="tp-fine">Price on WhatsApp · depends on vehicle &amp; group size</p>';
+    planEl.innerHTML = html;
+    form.hidden = true; planEl.hidden = false;
+    title.textContent = 'Your trip plan';
+    sub.setAttribute('data-step', 'plan');
+    sub.querySelector('.d').textContent = p.nDays + (p.nDays > 1 ? ' days' : ' day') + ' · ' + p.people + (p.people > 1 ? ' people' : ' person') + ' · from ' + p.start.label;
+    body.scrollTop = 0;
+    planEl.querySelector('.tp-pt').focus({preventScroll: true});
+  }
+  function showForm(){
+    planEl.hidden = true; planEl.innerHTML = ''; form.hidden = false; hint.hidden = true;
+    title.textContent = 'Trip Planner';
+    sub.setAttribute('data-step', 'form'); sub.querySelector('.d').textContent = 'Coast & Western Ghats';
+    body.scrollTop = 0;
+    var first = daysEl.querySelector('[aria-checked="true"]'); if (first) first.focus({preventScroll: true});
+  }
+  function planText(p){
+    var out = [p.title, p.summary.charAt(0).toUpperCase() + p.summary.slice(1), 'Best time: ' + p.bestTime, ''];
+    p.days.forEach(function(d){
+      out.push('Day ' + d.n + ': ' + d.theme);
+      d.stops.forEach(function(s){ out.push('• ' + s.place + ' (' + s.category + ', ' + hrs(s.hours) + ')'); });
+      out.push(d.night ? 'Night stay: ' + d.night + ' — rooms arranged on request' : 'Drop back at ' + p.start.label);
+      out.push('Local food: ' + d.food, '');
+    });
+    out.push('Vehicle: ' + p.vehicle + ' for ' + p.people + (p.people > 1 ? ' people' : ' person'));
+    out.push('Tips: ' + p.tips.join(' '));
+    out.push('GR Tours & Travels · WhatsApp 96209 36143 · Price on WhatsApp');
+    return out.join('\n');
+  }
+  function copyPlan(btn){
+    var text = planText(current), label = btn.querySelector('span');
+    function done(){ label.textContent = 'Copied ✓'; setTimeout(function(){ label.textContent = 'Copy plan'; }, 2000); }
+    function fallback(){
+      var ta = planEl.querySelector('.tp-copybox');
+      if (!ta){ ta = document.createElement('textarea'); ta.className = 'tp-copybox'; ta.readOnly = true; ta.setAttribute('aria-label', 'Plan text'); btn.parentNode.insertAdjacentElement('afterend', ta); }
+      ta.value = text; ta.focus(); ta.select();
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      if (ok) done(); else label.textContent = 'Select and copy';
+    }
+    if (navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(text).then(done, fallback); } else fallback();
+  }
+  planEl.addEventListener('click', function(e){
+    if (e.target.closest('.tp-again')) showForm();
+    var c = e.target.closest('.tp-copy'); if (c) copyPlan(c);
+  });
+
+  // ---- open / close ----
+  var isOpen = false, locked = false, prevHtml = '', prevBody = '';
+  function lock(on){
+    var de = document.documentElement;
+    if (on && !locked){ prevHtml = de.style.overflow; prevBody = document.body.style.overflow; de.style.overflow = 'hidden'; document.body.style.overflow = 'hidden'; locked = true; }
+    else if (!on && locked){ de.style.overflow = prevHtml; document.body.style.overflow = prevBody; locked = false; }
+  }
+  function open(){
+    if (isOpen) return;
+    isOpen = true; root.classList.add('open'); spark.setAttribute('aria-expanded', 'true');
+    lock(phoneMQ.matches);
+    requestAnimationFrame(function(){ panel.focus({preventScroll: true}); });
+  }
+  function close(){
+    if (!isOpen) return;
+    isOpen = false; root.classList.remove('open'); spark.setAttribute('aria-expanded', 'false');
+    lock(false); panel.style.transform = '';
+    spark.focus({preventScroll: true});
+  }
+  spark.addEventListener('click', open);
+  lbl.addEventListener('click', open);
+  $('.tp-x').addEventListener('click', close);
+  scrim.addEventListener('click', close);
+  phoneMQ.addEventListener ? phoneMQ.addEventListener('change', function(){ if (isOpen) lock(phoneMQ.matches); }) : phoneMQ.addListener(function(){ if (isOpen) lock(phoneMQ.matches); });
+
+  function focusables(){
+    return Array.prototype.slice.call(panel.querySelectorAll('button, a[href], textarea, input, [tabindex]:not([tabindex="-1"])')).filter(function(el){
+      return !el.disabled && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
+    });
+  }
+  document.addEventListener('keydown', function(e){
+    if (!isOpen) return;
+    if (e.key === 'Escape'){ e.preventDefault(); close(); return; }
+    if (e.key !== 'Tab') return;
+    var f = focusables(); if (!f.length) return;
+    var first = f[0], last = f[f.length - 1], a = document.activeElement;
+    if (e.shiftKey && (a === first || !panel.contains(a) || a === panel)){ e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (a === last || !panel.contains(a))){ e.preventDefault(); first.focus(); }
+  });
+  document.addEventListener('focusin', function(e){ if (isOpen && !panel.contains(e.target)) panel.focus({preventScroll: true}); });
+
+  // swipe down to close (phone sheet)
+  var drag = null;
+  panel.addEventListener('touchstart', function(e){
+    if (!isOpen || !phoneMQ.matches || e.touches.length !== 1) return;
+    var head = !!e.target.closest('.tp-grab, .tp-hd');
+    if (!head && body.scrollTop > 0) return;
+    drag = {y0: e.touches[0].clientY, y: e.touches[0].clientY, t0: Date.now(), head: head, on: false};
+  }, {passive: true});
+  panel.addEventListener('touchmove', function(e){
+    if (!drag) return;
+    var y = e.touches[0].clientY, dy = y - drag.y0; drag.y = y;
+    if (!drag.on){
+      if (dy > 6 && (drag.head || body.scrollTop <= 0)){ drag.on = true; panel.classList.add('drag'); }
+      else if (dy < -6){ drag = null; return; }
+      else return;
+    }
+    e.preventDefault();
+    panel.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
+  }, {passive: false});
+  function endDrag(){
+    if (!drag) return;
+    var d = drag; drag = null;
+    if (!d.on) return;
+    var dy = d.y - d.y0, v = dy / Math.max(1, Date.now() - d.t0);
+    panel.classList.remove('drag'); panel.style.transform = '';
+    if (dy > 110 || (dy > 40 && v > 0.6)) close();
+  }
+  panel.addEventListener('touchend', endDrag);
+  panel.addEventListener('touchcancel', endDrag);
+
+  // keep the ✦ button 12px above the "Chat with us" button at every size
+  function place(){
+    var fab = document.querySelector('.s-footer .fab') || document.querySelector('a.fab');
+    var r = fab && fab.getBoundingClientRect();
+    if (!r || !r.height){ launch.style.bottom = ''; return; }
+    var vh = document.documentElement.clientHeight;
+    launch.style.bottom = Math.round(vh - r.top + 12) + 'px';
+  }
+  // never sit on top of a button, link or field of the section underneath
+  var coverRaf = 0;
+  function shown(el){
+    for (var n = el; n && n !== document.body; n = n.parentElement){
+      var cs = getComputedStyle(n);
+      if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) < 0.05 || cs.pointerEvents === 'none') return false;
+    }
+    return true;
+  }
+  function covers(box, list){
+    return list.some(function(t){
+      var q = t.getBoundingClientRect();
+      return q.width && q.height && q.right > box.left && q.left < box.right && q.bottom > box.top && q.top < box.bottom && shown(t);
+    });
+  }
+  function checkCover(){
+    coverRaf = 0;
+    if (isOpen) return;
+    var list = Array.prototype.filter.call(document.querySelectorAll('a[href], button, input, select, textarea, [role="button"], [role="tab"]'), function(t){
+      return !root.contains(t) && !t.closest('.fab');
+    });
+    var sparkHit = covers(spark.getBoundingClientRect(), list);
+    var lblBox = lbl.getBoundingClientRect(), lblHit = !sparkHit && lblBox.width > 0 && covers(lblBox, list);
+    launch.classList.toggle('tuck', sparkHit);
+    launch.classList.toggle('nolbl', lblHit);
+  }
+  var settle = [];
+  function queueCover(){ if (!coverRaf) coverRaf = requestAnimationFrame(checkCover); }
+  function onScroll(){   // check now, and again once the sections underneath have finished animating
+    queueCover();
+    settle.forEach(clearTimeout);
+    settle = [setTimeout(queueCover, 250), setTimeout(queueCover, 700)];
+  }
+  addEventListener('scroll', onScroll, {passive: true});
+  document.addEventListener('transitionend', queueCover, true);
+  document.addEventListener('animationend', queueCover, true);
+
+  place();
+  queueCover();
+  addEventListener('resize', function(){ place(); queueCover(); });
+  addEventListener('load', place);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+
+  paint();
+})();
+</script>

@@ -15,6 +15,7 @@ SECTIONS = [  # (key, source folder, wrapper id used by the nav/footer links)
     ('plans',    'sections/tour-plans',    'plans'),
     ('vehicles', 'sections/vehicles',      'vehicles'),
     ('footer',   'sections/footer',        'contact'),
+    ('assistant', 'sections/assistant',    'assistant'),
 ]
 SHARED_SYMBOLS = None  # symbol ids (<symbol id=...>) stay global; they are identical icons
 

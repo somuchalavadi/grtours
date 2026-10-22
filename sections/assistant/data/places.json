@@ -1,0 +1,1522 @@
+{
+ "neighbours": {
+  "murdeshwar": [
+   "honnavar",
+   "byndoor"
+  ],
+  "honnavar": [
+   "murdeshwar",
+   "kumta",
+   "jog"
+  ],
+  "jog": [
+   "honnavar",
+   "siddapur"
+  ],
+  "kumta": [
+   "honnavar",
+   "gokarna",
+   "yana",
+   "siddapur"
+  ],
+  "gokarna": [
+   "kumta",
+   "ankola"
+  ],
+  "yana": [
+   "kumta",
+   "sirsi",
+   "ankola"
+  ],
+  "ankola": [
+   "gokarna",
+   "karwar",
+   "yana"
+  ],
+  "karwar": [
+   "ankola",
+   "dandeli"
+  ],
+  "dandeli": [
+   "karwar",
+   "yellapur"
+  ],
+  "yellapur": [
+   "dandeli",
+   "sirsi"
+  ],
+  "sirsi": [
+   "yellapur",
+   "siddapur",
+   "yana"
+  ],
+  "siddapur": [
+   "sirsi",
+   "jog",
+   "kumta"
+  ],
+  "byndoor": [
+   "murdeshwar",
+   "kollur",
+   "kundapura"
+  ],
+  "kollur": [
+   "byndoor",
+   "kundapura"
+  ],
+  "kundapura": [
+   "byndoor",
+   "kollur",
+   "udupi"
+  ],
+  "udupi": [
+   "kundapura",
+   "karkala",
+   "mangaluru"
+  ],
+  "karkala": [
+   "udupi",
+   "moodbidri"
+  ],
+  "moodbidri": [
+   "karkala",
+   "mangaluru",
+   "dharmasthala"
+  ],
+  "mangaluru": [
+   "udupi",
+   "moodbidri",
+   "dharmasthala"
+  ],
+  "dharmasthala": [
+   "moodbidri",
+   "mangaluru",
+   "subramanya"
+  ],
+  "subramanya": [
+   "dharmasthala"
+  ]
+ },
+ "places": [
+  {
+   "district": "Uttara Kannada",
+   "area": "murdeshwar",
+   "area_town": "Murdeshwar",
+   "place": "Murdeshwar Temple & Shiva Statue",
+   "category": "temple",
+   "hours": 2,
+   "description": "Giant seated Shiva statue and the tall Raja Gopura on Kanduka hill, with the sea on three sides.",
+   "note": "Lift to the top of the gopura; dress modestly."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "murdeshwar",
+   "area_town": "Murdeshwar",
+   "place": "Murdeshwar Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Rocky-edged beach right below the temple hill.",
+   "note": "Swim only where lifeguards allow."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "murdeshwar",
+   "area_town": "Murdeshwar",
+   "place": "Netrani Island",
+   "category": "island",
+   "hours": 4,
+   "description": "Small island off Murdeshwar known for scuba diving and snorkelling over coral reefs.",
+   "note": "Dives depend on sea conditions and season."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "murdeshwar",
+   "area_town": "Murdeshwar",
+   "place": "Bhatkal Lighthouse",
+   "category": "viewpoint",
+   "hours": 1,
+   "description": "Small hill near Bhatkal harbour with sea and harbour views.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "murdeshwar",
+   "area_town": "Murdeshwar",
+   "place": "Chandranatha Basadi, Bhatkal",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Old Jain basadi in Bhatkal town.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "murdeshwar",
+   "area_town": "Murdeshwar",
+   "place": "Hadin Eco Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Park-like beach campus with picnic spots near Bhatkal.",
+   "note": "Entry fee."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "murdeshwar",
+   "area_town": "Murdeshwar",
+   "place": "Bheemeshwara Temple & Falls",
+   "category": "waterfall",
+   "hours": 4,
+   "description": "Forest temple and waterfall off the Jog Falls road.",
+   "note": "Jeep, bike or trek access; best July–December."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "murdeshwar",
+   "area_town": "Murdeshwar",
+   "place": "Nastaar Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Quiet beach with a huge rock, opposite Bhatkal lighthouse.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "honnavar",
+   "area_town": "Honnavar",
+   "place": "Idagunji Maha Ganapati Temple",
+   "category": "temple",
+   "hours": 1.5,
+   "description": "Much-visited Ganapati temple a short drive inland from Honnavar.",
+   "note": "Long queues on weekends."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "honnavar",
+   "area_town": "Honnavar",
+   "place": "Kasarkod Eco Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Clean, Blue Flag certified beach near Honnavar.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "honnavar",
+   "area_town": "Honnavar",
+   "place": "Apsarakonda Falls & Beach",
+   "category": "waterfall",
+   "hours": 1.5,
+   "description": "Small waterfall, garden and temple beside a quiet beach, about 8 km from Honnavar.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "honnavar",
+   "area_town": "Honnavar",
+   "place": "Sharavathi Backwaters & Mangrove Boardwalk",
+   "category": "nature",
+   "hours": 2,
+   "description": "Calm backwaters and mangroves where the Sharavathi meets the sea.",
+   "note": "Boat rides best in the late afternoon."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "honnavar",
+   "area_town": "Honnavar",
+   "place": "Basavaraja Durga Island Fort",
+   "category": "fort",
+   "hours": 3,
+   "description": "Fortified island in the Arabian Sea off Honnavar.",
+   "note": "Boats depend on weather."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "honnavar",
+   "area_town": "Honnavar",
+   "place": "Ramatirtha",
+   "category": "temple",
+   "hours": 0.5,
+   "description": "Sacred spring-fed water tank (pushkarini).",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "honnavar",
+   "area_town": "Honnavar",
+   "place": "Gerusoppa Chaturmukha Basadi",
+   "category": "heritage",
+   "hours": 1.5,
+   "description": "16th-century four-faced Jain temple in the Sharavathi valley.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "honnavar",
+   "area_town": "Honnavar",
+   "place": "Dhareshwar Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Quiet fishing beach beside the highway between Kumta and Honnavar.",
+   "note": ""
+  },
+  {
+   "district": "Nearby (border)",
+   "area": "jog",
+   "area_town": "Jog",
+   "place": "Jog Falls",
+   "category": "waterfall",
+   "hours": 2.5,
+   "description": "One of India's highest plunge waterfalls, where the Sharavathi drops in four streams.",
+   "note": "Most water August–November; mist can hide the view."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "jog",
+   "area_town": "Jog",
+   "place": "Bangara Kusuma Falls",
+   "category": "waterfall",
+   "hours": 2,
+   "description": "Forest waterfall a few km north of Gerusoppa.",
+   "note": "Best after the monsoon."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "kumta",
+   "area_town": "Kumta",
+   "place": "Mirjan Fort",
+   "category": "fort",
+   "hours": 1.5,
+   "description": "16th-century laterite fort with moats and bastions, about 11 km from Kumta.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "kumta",
+   "area_town": "Kumta",
+   "place": "Dhareshwar Mahadev Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Ancient black-stone temple near Kumta.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "kumta",
+   "area_town": "Kumta",
+   "place": "Alvekodi Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Secluded, undeveloped beach near Kumta.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "kumta",
+   "area_town": "Kumta",
+   "place": "Burude (Dodmane) Falls",
+   "category": "waterfall",
+   "hours": 3,
+   "description": "Tall forest waterfall on the Siddapur–Kumta road.",
+   "note": "Walk to the base; slippery after rain."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "gokarna",
+   "area_town": "Gokarna",
+   "place": "Mahabaleshwar Temple",
+   "category": "temple",
+   "hours": 1.5,
+   "description": "Ancient granite temple of the Atmalinga, facing the sea.",
+   "note": "Traditional dress rules apply inside."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "gokarna",
+   "area_town": "Gokarna",
+   "place": "Koti Teertha",
+   "category": "temple",
+   "hours": 0.5,
+   "description": "Sacred temple tank in Gokarna town.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "gokarna",
+   "area_town": "Gokarna",
+   "place": "Om Beach",
+   "category": "beach",
+   "hours": 2.5,
+   "description": "Beach whose two curved coves together look like the Om symbol.",
+   "note": "Avoid swimming near the rocks."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "gokarna",
+   "area_town": "Gokarna",
+   "place": "Kudle Beach",
+   "category": "beach",
+   "hours": 2,
+   "description": "Wide, calm bay with palms and cafes.",
+   "note": "Stay for the sunset."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "gokarna",
+   "area_town": "Gokarna",
+   "place": "Half Moon Beach",
+   "category": "beach",
+   "hours": 2,
+   "description": "Quiet crescent cove by cliff trail or boat from Om Beach.",
+   "note": "Carry water; basic facilities."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "gokarna",
+   "area_town": "Gokarna",
+   "place": "Paradise Beach",
+   "category": "beach",
+   "hours": 2,
+   "description": "Small secluded cove further along the cliff trail.",
+   "note": "Trail or boat only."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "gokarna",
+   "area_town": "Gokarna",
+   "place": "Gokarna Main Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Long town beach next to the temple street.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "yana",
+   "area_town": "Kumta",
+   "place": "Yana Rocks",
+   "category": "nature",
+   "hours": 3,
+   "description": "Two giant black karst rock peaks (Bhairaveshwara and Mohini) with a cave temple.",
+   "note": "Short forest walk; good shoes."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "yana",
+   "area_town": "Kumta",
+   "place": "Vibhooti Falls",
+   "category": "waterfall",
+   "hours": 2,
+   "description": "Zig-zag forest waterfall reached by a short walk near Yana.",
+   "note": "Trails slippery after rain."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "ankola",
+   "area_town": "Ankola",
+   "place": "Honnebail Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Quiet beach near Ankola.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "ankola",
+   "area_town": "Ankola",
+   "place": "Donne Falls",
+   "category": "waterfall",
+   "hours": 1.5,
+   "description": "Small waterfall between Karwar and Ankola.",
+   "note": "Monsoon to winter only."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "Rabindranath Tagore Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Karwar's long town beach with a promenade.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "INS Chapal Warship Museum",
+   "category": "heritage",
+   "hours": 1,
+   "description": "A real warship turned into a museum on the beach.",
+   "note": "Check opening days."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "Rock Garden, Karwar",
+   "category": "park",
+   "hours": 0.5,
+   "description": "Sculpture garden next to the warship museum.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "Devbagh Beach",
+   "category": "beach",
+   "hours": 2,
+   "description": "Quiet beach where the Kali river meets the sea.",
+   "note": "Water sports in season."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "Majali Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Long beach north of Karwar towards Goa.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "Kali River Bridge & Garden",
+   "category": "viewpoint",
+   "hours": 0.5,
+   "description": "River-mouth views; good for sunrise and sunset.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "Sadashivgad Fort",
+   "category": "fort",
+   "hours": 1,
+   "description": "Old hill fort above the Kali river bridge.",
+   "note": "Access may be restricted."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "Kurmagad Island",
+   "category": "island",
+   "hours": 3,
+   "description": "Island off Karwar reached by boat.",
+   "note": "Boats depend on permission and weather."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "karwar",
+   "area_town": "Karwar",
+   "place": "Oyster Rock Lighthouse",
+   "category": "island",
+   "hours": 3,
+   "description": "Offshore lighthouse seen on Karwar boat trips.",
+   "note": "Boat trips only."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Kali River Rafting",
+   "category": "adventure",
+   "hours": 3,
+   "description": "White-water rafting, kayaking and coracle rides on the Kali river.",
+   "note": "Registered operators; season-dependent."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Dandeli Wildlife Sanctuary (Kali Tiger Reserve)",
+   "category": "wildlife",
+   "hours": 3,
+   "description": "Large protected forest known for hornbills, kingfishers, gaur and deer.",
+   "note": "Early-morning safari is best."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Syntheri Rocks",
+   "category": "nature",
+   "hours": 1.5,
+   "description": "Huge granite monolith carved by the Kaneri river.",
+   "note": "Steps down to the river."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Kavala Caves",
+   "category": "nature",
+   "hours": 2,
+   "description": "Limestone caves with a natural Shiva linga, reached by over 350 steps.",
+   "note": "Carry a torch."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Supa Dam & Backwaters",
+   "category": "nature",
+   "hours": 1.5,
+   "description": "Calm reservoir on the Kali river.",
+   "note": "Some areas restricted."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Ganeshgudi",
+   "category": "nature",
+   "hours": 2,
+   "description": "Quiet forest village near Supa, known for birdwatching.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Shiroli Peak",
+   "category": "viewpoint",
+   "hours": 1.5,
+   "description": "Dandeli's highest point, with Western Ghats views at sunset.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Moulangi Eco Park",
+   "category": "park",
+   "hours": 1.5,
+   "description": "Family eco park among bamboo groves and forest streams.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Anshi National Park",
+   "category": "wildlife",
+   "hours": 3,
+   "description": "Evergreen forest park in Joida taluk, part of the Kali Tiger Reserve.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Ulavi Channabasaveshwara Temple",
+   "category": "temple",
+   "hours": 1.5,
+   "description": "Pilgrimage temple deep in the Joida forests.",
+   "note": ""
+  },
+  {
+   "district": "Nearby (border)",
+   "area": "dandeli",
+   "area_town": "Dandeli",
+   "place": "Dudhsagar Falls",
+   "category": "waterfall",
+   "hours": 4,
+   "description": "Tall Mandovi river falls on the Goa border, crossed by the Konkan railway line.",
+   "note": "Access and permits vary by season."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "yellapur",
+   "area_town": "Yellapur",
+   "place": "Magod Falls",
+   "category": "waterfall",
+   "hours": 2,
+   "description": "Two-step fall of the Bedthi river into a deep forest gorge, about 17 km from Yellapur.",
+   "note": "Viewpoint only."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "yellapur",
+   "area_town": "Yellapur",
+   "place": "Sathodi Falls",
+   "category": "waterfall",
+   "hours": 2.5,
+   "description": "Wide forest waterfall into a clear pool, about 32 km from Yellapur.",
+   "note": "Go early."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "yellapur",
+   "area_town": "Yellapur",
+   "place": "Lalguli Falls",
+   "category": "waterfall",
+   "hours": 1.5,
+   "description": "Kali river falls about 13 km from Yellapur.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "yellapur",
+   "area_town": "Yellapur",
+   "place": "Jenukallu Gudda",
+   "category": "viewpoint",
+   "hours": 1.5,
+   "description": "Western Ghats peak in evergreen forest, about 17 km from Yellapur.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Sri Marikamba Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Sirsi's famous goddess temple, known for its painted walls and big festival.",
+   "note": "Early morning is calmest."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Sri Mahaganapathi Temple, Sirsi",
+   "category": "temple",
+   "hours": 0.5,
+   "description": "Temple with a large Ganesha idol near the town centre.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Sahasralinga",
+   "category": "temple",
+   "hours": 1.5,
+   "description": "Hundreds of lingas carved on the rocks of the Shalmala river.",
+   "note": "Best when water is low."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Banavasi Madhukeshwara Temple",
+   "category": "heritage",
+   "hours": 1.5,
+   "description": "Ancient carved temple in Banavasi, the old Kadamba capital.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Shivaganga Falls",
+   "category": "waterfall",
+   "hours": 2,
+   "description": "Forest waterfall near Sonda dropping into a deep valley.",
+   "note": "Good grip shoes."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Benne Hole Falls",
+   "category": "waterfall",
+   "hours": 2.5,
+   "description": "Forceful, creamy-white forest cascade near Kasage, off the Kumta road.",
+   "note": "Trek in; after monsoon."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Swarnavalli Matha, Sonda",
+   "category": "temple",
+   "hours": 1,
+   "description": "Historic matha in the Sonda forests.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Manjuguni Venkataramana Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Hill temple known as the \"Tirupati of Karnataka\".",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Kailasa Gudda",
+   "category": "viewpoint",
+   "hours": 1,
+   "description": "Hill viewpoint over the forests near Sirsi.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Gudavi Bird Sanctuary",
+   "category": "wildlife",
+   "hours": 2,
+   "description": "Lake sanctuary with many water birds.",
+   "note": "Best June–December."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "sirsi",
+   "area_town": "Sirsi",
+   "place": "Muregar Falls",
+   "category": "waterfall",
+   "hours": 1.5,
+   "description": "Forest waterfall near Muregar village.",
+   "note": ""
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "siddapur",
+   "area_town": "Siddapur",
+   "place": "Unchalli (Lushington) Falls",
+   "category": "waterfall",
+   "hours": 2.5,
+   "description": "Tall Aghanashini waterfall in deep forest.",
+   "note": "Walk down to the viewpoint."
+  },
+  {
+   "district": "Uttara Kannada",
+   "area": "siddapur",
+   "area_town": "Siddapur",
+   "place": "Keppa Jog",
+   "category": "waterfall",
+   "hours": 2,
+   "description": "A smaller cousin of Jog Falls in the forest.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "byndoor",
+   "area_town": "Byndoor",
+   "place": "Ottinene Viewpoint & Beach",
+   "category": "viewpoint",
+   "hours": 1.5,
+   "description": "Hilltop view where a river meets the Arabian Sea.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "byndoor",
+   "area_town": "Byndoor",
+   "place": "Someshwara Beach & Temple, Byndoor",
+   "category": "beach",
+   "hours": 1,
+   "description": "Beach with a temple near Ottinene.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "byndoor",
+   "area_town": "Byndoor",
+   "place": "Koosalli Falls",
+   "category": "waterfall",
+   "hours": 4,
+   "description": "Forest falls near Byndoor reached by a 4 km trek.",
+   "note": "Trek; after monsoon."
+  },
+  {
+   "district": "Udupi",
+   "area": "byndoor",
+   "area_town": "Byndoor",
+   "place": "Haklamane Falls",
+   "category": "waterfall",
+   "hours": 2,
+   "description": "Falls between Byndoor and Kollur.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "kollur",
+   "area_town": "Kollur",
+   "place": "Kollur Mookambika Temple",
+   "category": "temple",
+   "hours": 2,
+   "description": "Famous temple of Goddess Mookambika at the foot of the Kodachadri hills.",
+   "note": "Queues on festivals."
+  },
+  {
+   "district": "Udupi",
+   "area": "kollur",
+   "area_town": "Kollur",
+   "place": "Belkal Theertha Falls",
+   "category": "waterfall",
+   "hours": 4,
+   "description": "Forest waterfall near Kollur reached by a 3 km trek.",
+   "note": "Best in the rainy season."
+  },
+  {
+   "district": "Udupi",
+   "area": "kollur",
+   "area_town": "Kollur",
+   "place": "Arisina Gundi Falls",
+   "category": "waterfall",
+   "hours": 3,
+   "description": "Forest waterfall near Kollur.",
+   "note": "Trek."
+  },
+  {
+   "district": "Nearby (border)",
+   "area": "kollur",
+   "area_town": "Kollur",
+   "place": "Kodachadri Peak",
+   "category": "viewpoint",
+   "hours": 5,
+   "description": "High Western Ghats peak reached by jeep or trek from Kollur.",
+   "note": "Long day; weather-dependent."
+  },
+  {
+   "district": "Udupi",
+   "area": "kundapura",
+   "area_town": "Kundapura",
+   "place": "Maravanthe Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Highway on a thin strip between the sea and the Souparnika river.",
+   "note": "Strong waves on the sea side."
+  },
+  {
+   "district": "Udupi",
+   "area": "kundapura",
+   "area_town": "Kundapura",
+   "place": "Kodi Beach & Sea Walk",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "River-mouth beach and sea walk near Kundapura.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "kundapura",
+   "area_town": "Kundapura",
+   "place": "Gangolli End Point & Lighthouse",
+   "category": "viewpoint",
+   "hours": 1,
+   "description": "Quiet river-mouth viewpoint and lighthouse rocks.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "kundapura",
+   "area_town": "Kundapura",
+   "place": "Anegudde Vinayaka Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Well-known Ganesha temple at Kumbashi.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "kundapura",
+   "area_town": "Kundapura",
+   "place": "Kamalashile Brahmi Durgaparameshwari Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Temple by the Kubja river.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "kundapura",
+   "area_town": "Kundapura",
+   "place": "Uppinakudru Puppet House",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Yakshagana puppet exhibits near Kundapura.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "kundapura",
+   "area_town": "Kundapura",
+   "place": "Gulvadi Dam",
+   "category": "nature",
+   "hours": 0.5,
+   "description": "Scenic dam near Kundapura.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Sri Krishna Matha",
+   "category": "temple",
+   "hours": 1.5,
+   "description": "Famous 13th-century Krishna temple founded by Madhvacharya.",
+   "note": "Free temple meal at lunchtime."
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Anantheshwara & Chandramouleshwara Temples",
+   "category": "temple",
+   "hours": 0.5,
+   "description": "Ancient Shiva temples beside the Krishna Matha.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Malpe Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Lively beach next to a big fishing harbour.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "St Mary's Island",
+   "category": "island",
+   "hours": 2.5,
+   "description": "Small islands with hexagonal basalt rock columns, by boat from Malpe.",
+   "note": "Boats run in season."
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Daria Bahadurgad Fort",
+   "category": "fort",
+   "hours": 1.5,
+   "description": "Ruined island fort about 2 km off Malpe.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Kaup Beach & Lighthouse",
+   "category": "beach",
+   "hours": 1,
+   "description": "Long beach with an old lighthouse on the rocks and Kapu fort nearby.",
+   "note": "Go for sunset."
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Mattu Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Secluded beach at the end of the Udyavara drive.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Padubidri Blue Flag Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Blue Flag certified beach with lifeguards and facilities.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Kodi Bengre Houseboats",
+   "category": "nature",
+   "hours": 2,
+   "description": "Houseboat rides on the backwaters near Udupi.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Manipal Lake & End Point",
+   "category": "viewpoint",
+   "hours": 1,
+   "description": "Lake and valley viewpoint in Manipal.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Hasta Shilpa Heritage Village, Manipal",
+   "category": "heritage",
+   "hours": 2,
+   "description": "Heritage village museum with old houses and crafts.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Kemmannu Hanging Bridge",
+   "category": "nature",
+   "hours": 1,
+   "description": "Suspension bridge over the Swarna river with kayaking nearby.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Pajaka Kshetra",
+   "category": "temple",
+   "hours": 1,
+   "description": "Birthplace of Madhvacharya, with hilltop temples.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Kunjarugiri Durga Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Hilltop temple with 360° views near Udupi.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Barkur",
+   "category": "heritage",
+   "hours": 1.5,
+   "description": "Old Tulu capital with ancient temples, basadis and fort ruins.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Mandarthi Durgaparameshwari Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Popular goddess temple north of Udupi.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "udupi",
+   "area_town": "Udupi",
+   "place": "Jumadi Island",
+   "category": "island",
+   "hours": 3,
+   "description": "Forested island by boat from Padubidri.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "karkala",
+   "area_town": "Karkala",
+   "place": "Karkala Gommateshwara (Bahubali) Statue",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Giant monolithic Bahubali statue on a rock hill.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "karkala",
+   "area_town": "Karkala",
+   "place": "Chaturmukha Basadi, Karkala",
+   "category": "heritage",
+   "hours": 0.5,
+   "description": "Late-16th-century four-faced Jain temple.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "karkala",
+   "area_town": "Karkala",
+   "place": "Attur St Lawrence Church",
+   "category": "heritage",
+   "hours": 0.5,
+   "description": "Church from 1759, known for its annual festival.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "karkala",
+   "area_town": "Karkala",
+   "place": "Varanga Lake Basadi",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Jain basadi in the middle of a lake near Hebri.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "karkala",
+   "area_town": "Karkala",
+   "place": "Kudlu Falls",
+   "category": "waterfall",
+   "hours": 3,
+   "description": "Forest waterfall near Hebri, reached by a moderate trek.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "karkala",
+   "area_town": "Karkala",
+   "place": "Jomlu Theertha Falls",
+   "category": "waterfall",
+   "hours": 1.5,
+   "description": "Small, safe waterfall near Belve.",
+   "note": ""
+  },
+  {
+   "district": "Udupi",
+   "area": "karkala",
+   "area_town": "Karkala",
+   "place": "Someshwara Wildlife Sanctuary",
+   "category": "wildlife",
+   "hours": 3,
+   "description": "Western Ghats forest sanctuary near Hebri.",
+   "note": ""
+  },
+  {
+   "district": "Nearby (border)",
+   "area": "karkala",
+   "area_town": "Karkala",
+   "place": "Agumbe Sunset Point",
+   "category": "viewpoint",
+   "hours": 2,
+   "description": "Rain-forest hill village with a famous sunset view.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Panambur Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Popular, well-kept beach near the port, with water sports.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Tannirbhavi Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Calm beach with sunset views and a tree park.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Surathkal Beach & Lighthouse",
+   "category": "beach",
+   "hours": 1,
+   "description": "Rocky beach with a lighthouse.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Sasihithlu Beach",
+   "category": "beach",
+   "hours": 1,
+   "description": "Quiet river-mouth beach through an acacia grove.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Ullal & Someshwara Beach",
+   "category": "beach",
+   "hours": 1.5,
+   "description": "Beaches south of the city with rocky outcrops.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Kadri Manjunatha Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Hilltop temple said to date from the 10th–11th century.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Kudroli Gokarnanatha Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Colourful temple famous for its Navaratri (Dasara) celebrations.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Mangaladevi Temple",
+   "category": "temple",
+   "hours": 0.5,
+   "description": "Temple of Goddess Mangaladevi that gives the city its name.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "St Aloysius Chapel",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Chapel with walls and ceiling covered in old paintings.",
+   "note": "Photography rules apply."
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Milagres Church",
+   "category": "heritage",
+   "hours": 0.5,
+   "description": "One of Mangaluru's oldest churches.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Sultan Battery",
+   "category": "fort",
+   "hours": 1,
+   "description": "Black-stone watchtower built by Tipu Sultan by the river.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Ullal Dargah",
+   "category": "heritage",
+   "hours": 0.5,
+   "description": "Respected Sufi shrine at Ullal.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Pilikula Nisargadhama",
+   "category": "park",
+   "hours": 3,
+   "description": "Nature park with zoo, lake, science centre and heritage village.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Bejai Museum",
+   "category": "heritage",
+   "hours": 1,
+   "description": "City museum in a ship-shaped building.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Kateel Durgaparameshwari Temple",
+   "category": "temple",
+   "hours": 1,
+   "description": "Temple on an islet in the Nandini river.",
+   "note": "Crowded on festivals."
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Mangaluru",
+   "place": "Batapady Mangrove Boat Ride",
+   "category": "nature",
+   "hours": 1.5,
+   "description": "Boat ride under mangroves south of the city.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "moodbidri",
+   "area_town": "Moodbidri",
+   "place": "Saavira Kambada Basadi",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Thousand-pillar Jain temple from 1430.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "moodbidri",
+   "area_town": "Moodbidri",
+   "place": "Moodbidri Jain Basadis",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Cluster of old Jain temples (basadis) along Basadi Road.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "moodbidri",
+   "area_town": "Moodbidri",
+   "place": "Venur Bahubali Statue",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Monolithic Bahubali statue by the Phalguni river.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "dharmasthala",
+   "area_town": "Dharmasthala",
+   "place": "Dharmasthala Manjunatha Temple",
+   "category": "temple",
+   "hours": 2,
+   "description": "Major pilgrimage temple known for its free meals and charity.",
+   "note": "Traditional dress; long queues."
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "dharmasthala",
+   "area_town": "Dharmasthala",
+   "place": "Manjusha Car Museum, Dharmasthala",
+   "category": "heritage",
+   "hours": 1,
+   "description": "Vintage car and heritage museum.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "dharmasthala",
+   "area_town": "Dharmasthala",
+   "place": "Dharmasthala Bahubali Hill",
+   "category": "heritage",
+   "hours": 0.5,
+   "description": "Monolithic Bahubali statue on a hill.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "dharmasthala",
+   "area_town": "Dharmasthala",
+   "place": "Sowthadka Ganapathi Temple",
+   "category": "temple",
+   "hours": 0.5,
+   "description": "Open-air Ganesha shrine hung with bells.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "dharmasthala",
+   "area_town": "Dharmasthala",
+   "place": "Jamalabad (Gadaikallu) Fort",
+   "category": "fort",
+   "hours": 4,
+   "description": "Hill fort on a steep rock near Belthangady.",
+   "note": "Steep climb; check if open before going."
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "dharmasthala",
+   "area_town": "Dharmasthala",
+   "place": "Bandaje Falls",
+   "category": "waterfall",
+   "hours": 6,
+   "description": "Tall forest waterfall reached by a long trek.",
+   "note": "Long trek; go with a local guide."
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "dharmasthala",
+   "area_town": "Dharmasthala",
+   "place": "Ermayi Falls",
+   "category": "waterfall",
+   "hours": 2,
+   "description": "Forest waterfall near Kajoor.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "dharmasthala",
+   "area_town": "Dharmasthala",
+   "place": "Didupe Falls",
+   "category": "waterfall",
+   "hours": 2,
+   "description": "Forest waterfall reached by an easy 2 km walk.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "subramanya",
+   "area_town": "Subramanya",
+   "place": "Kukke Subramanya Temple",
+   "category": "temple",
+   "hours": 2,
+   "description": "Major pilgrimage temple of Lord Subramanya.",
+   "note": "Crowded on weekends."
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "subramanya",
+   "area_town": "Subramanya",
+   "place": "Kumara Parvatha Trek",
+   "category": "adventure",
+   "hours": 10,
+   "description": "One of Karnataka's toughest treks, starting at Kukke.",
+   "note": "Forest permit; full day."
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "subramanya",
+   "area_town": "Puttur",
+   "place": "Puttur Mahalingeshwara Temple",
+   "category": "temple",
+   "hours": 0.5,
+   "description": "Popular Shiva temple in Puttur.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Bantwal",
+   "place": "Karinjeshwara Hill Temple",
+   "category": "temple",
+   "hours": 1.5,
+   "description": "Hilltop temple near Bantwal with steps and wide views.",
+   "note": ""
+  },
+  {
+   "district": "Dakshina Kannada",
+   "area": "mangaluru",
+   "area_town": "Bantwal",
+   "place": "Vitla Panchalingeshwara Temple",
+   "category": "temple",
+   "hours": 0.5,
+   "description": "Old Shiva temple in Vitla.",
+   "note": ""
+  }
+ ]
+}
