@@ -141,7 +141,10 @@ body{background:#EEF4FB;color:#1e293b;font-family:var(--f);-webkit-font-smoothin
 .tp-dh{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .tp-dh h4{font-size:.93rem;font-weight:700;color:var(--ink);letter-spacing:-.01em}
 .tp-pill{flex:none;font-size:.6rem;font-weight:800;letter-spacing:.08em;color:#fff;background:linear-gradient(180deg,#24467F,#0B1F44);padding:4px 9px;border-radius:999px;box-shadow:inset 0 1px 1px rgba(255,255,255,.35)}
-.tp-fill{font-size:.72rem;color:var(--ink-3);margin-top:3px}
+.tp-drive{font-size:.74rem;color:var(--ink-2);margin-top:3px;line-height:1.4}
+.tp-also{font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-top:12px}
+.tp-also + .tp-stops{margin-top:7px}
+.tp-miss{margin-top:8px;font-size:.74rem;line-height:1.45;color:var(--ink-2)}
 .tp-stops{list-style:none;padding:0;display:grid;gap:8px;margin-top:10px}
 .tp-stop{display:grid;grid-template-columns:32px 1fr;gap:10px;padding:12px;border-radius:16px;
   background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,.55));box-shadow:inset 0 1px 1px #fff,inset 0 0 0 1px rgba(255,255,255,.7),0 8px 18px -14px rgba(14,42,92,.35);
@@ -233,364 +236,467 @@ body{background:#EEF4FB;color:#1e293b;font-family:var(--f);-webkit-font-smoothin
   </section>
 </div>
 
+<script>/*PLANNER-START*/
+/* GR Tours & Travels – offline trip planning engine.
+ * Pure function, no DOM, no network. Works in the browser (window.GRPlanner) and in Node (module.exports).
+ *
+ *   GRPlanner.plan(DATA, { days: 1-4, start: 'Murdeshwar', interests: ['Beaches & Islands', ...], people: 4 })
+ *
+ * DATA = places.json: { neighbours, areas: {area:{lat,lng}}, starts: {name:{lat,lng}},
+ *                       places: [{district, area, area_town, place, category, hours, description, note, top, hard}] }
+ *
+ * How it plans
+ *  - Drive time is estimated from town coordinates (straight line x 1.3 road factor, 50 km/h average on these roads).
+ *  - Each day picks one base area (plus areas within ~50 min of it) that gives the most value for the chosen interests,
+ *    minus the drive to get there. Interests not yet covered earn a bonus, so a mixed choice is spread over the days.
+ *  - The trip never drives more than ~4.5 h in a day, and the last day must be able to get back to the pickup point.
+ *  - Inside a day: matching must-see places first, then other matching places, then (only to reach 3 stops) nearby
+ *    must-see highlights. Hard places only when their own category was chosen, at most one a day, never for 8+ people.
+ *  - Deterministic: the same inputs always give the same plan.
+ */
+(function (root) {
+  'use strict';
+
+  var INTERESTS = {
+    'Waterfalls': ['waterfall'],
+    'Beaches & Islands': ['beach', 'island'],
+    'Temples & Heritage': ['temple', 'heritage'],
+    'Nature & Adventure': ['nature', 'viewpoint', 'park', 'adventure'],
+    'Wildlife': ['wildlife'],
+    'Historical Forts': ['fort']
+  };
+  var CAT_LABEL = { waterfall: 'waterfalls', beach: 'beaches', island: 'islands', temple: 'temples', heritage: 'heritage',
+    nature: 'nature', viewpoint: 'viewpoints', park: 'parks', adventure: 'adventure', wildlife: 'wildlife', fort: 'forts' };
+  var INTEREST_SHORT = { 'Waterfalls': 'Waterfalls', 'Beaches & Islands': 'Beaches', 'Temples & Heritage': 'Temples',
+    'Nature & Adventure': 'Nature', 'Wildlife': 'Wildlife', 'Historical Forts': 'Forts' };
+
+  var DAY_HOURS = 10;         // a full touring day incl. driving (about 8 am to 6 pm)
+  var MAX_DRIVE_H = 4.5;      // longest drive allowed in one day
+  var NEAR_H = 0.85;          // areas this close to the base can be added to the same day
+  var STOP_GAP_H = 0.35;      // local driving / parking between two stops in the same area
+  var FOOD = {
+    'Uttara Kannada': ['Neer dosa with fish curry', 'Kadubu with coconut chutney', 'Goli baje and filter coffee'],
+    'Ghats': ['Jolada rotti with ennegai', 'Kadubu with coconut chutney', 'Akki rotti with chutney'],
+    'Udupi': ['Udupi vegetarian thali', 'Goli baje and filter coffee', 'Masala dosa'],
+    'Dakshina Kannada': ['Kori rotti', 'Mangalorean fish curry', 'Mangalore buns'],
+    'Nearby (border)': ['Local vegetarian meals', 'Neer dosa with fish curry', 'Filter coffee and snacks']
+  };
+  // the region's best-known sights: always planned first when their kind is chosen
+  var STAR = {}; ['Jog Falls', 'Om Beach', 'Murdeshwar Temple & Shiva Statue', 'Sri Krishna Matha', 'Mahabaleshwar Temple',
+    'Netrani Island', 'Kollur Mookambika Temple', "St Mary's Island", 'Yana Rocks', 'Mirjan Fort', 'Malpe Beach',
+    'Sri Marikamba Temple', 'Dharmasthala Manjunatha Temple', 'Kukke Subramanya Temple', 'Kali River Rafting',
+    'Unchalli (Lushington) Falls', 'Sathodi Falls', 'Devbagh Beach', 'Kudle Beach', 'Panambur Beach'].forEach(function (n) { STAR[n] = 1; });
+  // the six places most visitors come for
+  ['Jog Falls', 'Om Beach', 'Murdeshwar Temple & Shiva Statue', 'Sri Krishna Matha', 'Mahabaleshwar Temple',
+    'Dandeli Wildlife Sanctuary (Kali Tiger Reserve)'].forEach(function (n) { STAR[n] = 2; });
+  var GHATS = { sirsi: 1, siddapur: 1, yellapur: 1, dandeli: 1, jog: 1, yana: 1 };
+
+  function km(a, b) {
+    var R = 6371, t = Math.PI / 180;
+    var dLat = (b.lat - a.lat) * t, dLng = (b.lng - a.lng) * t;
+    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a.lat * t) * Math.cos(b.lat * t) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  // crossing the Western Ghats (coast <-> Sirsi/Jog/Yellapur/Dandeli/Hubballi side) is slow, winding road
+  function driveH(a, b) { var d = km(a, b) * 1.3; if (d < 3) return 0; return d / 50 * (!!a.up !== !!b.up ? 1.3 : 1); }
+  function pen(h) { return 0.5 * h + 0.6 * Math.max(0, h - 2.5); } // long drives cost more
+  function round15(h) { return Math.max(0.25, Math.round(h * 4) / 4); }
+  function fmtH(h) {
+    var m = Math.round(h * 60 / 15) * 15; if (m < 15) m = 15;
+    var hh = Math.floor(m / 60), mm = m % 60;
+    return (hh ? hh + ' h' : '') + (hh && mm ? ' ' : '') + (mm ? mm + ' min' : '');
+  }
+
+  function plan(DATA, opts) {
+    var days = Math.max(1, Math.min(4, opts.days | 0 || 2));
+    var people = Math.max(1, opts.people | 0 || 1);
+    var interests = (opts.interests || []).filter(function (i) { return INTERESTS[i]; });
+    var startName = DATA.starts[opts.start] ? opts.start : 'Murdeshwar';
+    var wanted = {}; interests.forEach(function (i) { INTERESTS[i].forEach(function (c) { wanted[c] = i; }); });
+
+    var UP = { sirsi: 1, siddapur: 1, yellapur: 1, dandeli: 1, jog: 1, 'Hubballi Airport': 1 };
+    var A = {}, startPt;
+    Object.keys(DATA.areas).forEach(function (k) { A[k] = { lat: DATA.areas[k].lat, lng: DATA.areas[k].lng, up: !!UP[k] }; });
+    startPt = { lat: DATA.starts[startName].lat, lng: DATA.starts[startName].lng, up: !!UP[startName] };
+    var places = DATA.places.map(function (p, i) { return Object.assign({ idx: i }, p); });
+    function allowed(p) {
+      if (!p.hard) return true;
+      return !!wanted[p.category] && people < 8;
+    }
+    function value(p) {
+      if (!allowed(p)) return 0;
+      var star = STAR[p.place];
+      if (wanted[p.category] && p.hard) return 1;
+      if (wanted[p.category]) return STAR[p.place] === 2 ? 8 : star ? 6 : p.top ? 3.5 : 1.5;
+      return star ? 1 : p.top ? 0.6 : 0.15;
+    }
+    var byArea = {};
+    places.forEach(function (p) { (byArea[p.area] = byArea[p.area] || []).push(p); });
+    var areaNames = Object.keys(A).sort();
+
+    var BEAM = 14;
+    // beam search over day bases: keeps the best partial trips so early days leave room for later ones
+    var beam = [{ score: 0, used: {}, covered: {}, cur: startPt, curName: startName, days: [] }];
+    for (var d = 0; d < days; d++) {
+      var last = d === days - 1, next = [];
+      beam.forEach(function (st) {
+        areaNames.forEach(function (base) {
+          var drv = driveH(st.cur, A[base]);
+          if (drv > MAX_DRIVE_H) return;
+          var home = driveH(A[base], startPt);
+          var back = last ? home : 0;
+          if (last && back > MAX_DRIVE_H) return;
+          if (!last && home > MAX_DRIVE_H * (days - d - 1) + 0.01) return;
+          if (drv + back > 6) return;                       // no more than ~6 h in the vehicle on one day
+          var budget = DAY_HOURS - drv - back;
+          if (budget < 2) return;
+          var day = fillDay(base, budget, st.used, st.covered);
+          if (!day.stops.length) return;
+          if (day.stops.length === 1 && day.stops[0].hard) return; // a hard trek is never the whole day
+          // the base must be where the day really is: it holds the most stops (so labels and nights are honest)
+          var perArea = {}; day.stops.forEach(function (s) { perArea[s.area] = (perArea[s.area] || 0) + 1; });
+          var maxA = 0; for (var a in perArea) maxA = Math.max(maxA, perArea[a]);
+          if ((perArea[base] || 0) < maxA) return;
+          var bestStop = day.stops.slice().sort(function (x, y) { return value(y) - value(x) || x.idx - y.idx; })[0];
+          if (bestStop.area !== base && perArea[bestStop.area] === maxA) return;
+          var newCov = {}, matches = 0;
+          day.stops.forEach(function (s) { if (!s.filler) { matches++; if (!st.covered[wanted[s.category]]) newCov[wanted[s.category]] = 1; } });
+          // diminishing returns: the 4th+ place of the same kind in one trip counts half
+          // and a 4th stop in one day counts a little less than the day's three best stops
+          var cc = Object.assign({}, st.cats || {}), vals = [];
+          day.stops.forEach(function (s) { vals.push(value(s) * ((cc[s.category] || 0) >= 3 ? 0.5 : 1)); cc[s.category] = (cc[s.category] || 0) + 1; });
+          vals.sort(function (x, y) { return y - x; });
+          var val = vals.reduce(function (t, v, j) { return t + v * (j >= 3 ? 0.6 : 1); }, 0);
+          var gain = val + 5 * Object.keys(newCov).length - pen(drv) - pen(back) - (interests.length && !matches ? 3 : 0)
+            + (day.stops.length >= 3 ? 0.5 : 0);
+          var used = Object.assign({}, st.used), covered = Object.assign({}, st.covered);
+          day.stops.forEach(function (s) { used[s.idx] = 1; if (!s.filler) covered[wanted[s.category]] = 1; });
+          next.push({ score: st.score + gain, used: used, covered: covered, cats: cc, cur: A[base], curName: byArea[base][0].area_town,
+            days: st.days.concat([{ base: base, drv: drv, back: back, day: day, from: st.curName }]) });
+        });
+      });
+      if (!next.length) break;
+      next.sort(function (a, b) {
+        return b.score - a.score || (a.days.map(function (x) { return x.base; }).join() < b.days.map(function (x) { return x.base; }).join() ? -1 : 1);
+      });
+      // keep variety in the beam: at most 3 states ending at the same base
+      var seenBase = {}; beam = [];
+      for (var k = 0; k < next.length && beam.length < BEAM; k++) {
+        var lb = next[k].days[next[k].days.length - 1].base;
+        if ((seenBase[lb] = (seenBase[lb] || 0) + 1) <= 3) beam.push(next[k]);
+      }
+    }
+    var bestState = beam[0];
+    var covered = bestState.covered, out = [], foodIdx = {};
+    bestState.days.forEach(function (b, d) {
+      var last = d === bestState.days.length - 1;
+      var baseTown = byArea[b.base][0].area_town;
+      var distKey = GHATS[b.base] ? 'Ghats' : byArea[b.base][0].district;
+      var fi = foodIdx[distKey] || 0; foodIdx[distKey] = fi + 1;
+      var groups = rankLabels(b.day.stops.filter(function (s) { return !s.filler; }).map(function (s) { return CAT_LABEL[s.category]; }));
+      out.push({
+        day: d + 1,
+        base: b.base,
+        town: baseTown,
+        theme: baseTown + ' ' + (groups.length ? joinAnd(groups.slice(0, 2)) : 'highlights'),
+        driveFrom: b.from,
+        driveHours: round15(b.drv),
+        driveText: b.drv >= 0.5 ? (d === 0 ? 'Pickup at ' + b.from + ' · drive ≈ ' : 'Drive ≈ ') + fmtH(b.drv) + (d === 0 ? ' to ' + baseTown : ' from ' + b.from) : (d === 0 ? 'Pickup at ' + b.from : ''),
+        stops: b.day.stops.map(function (s) {
+          return { place: s.place, category: s.category, hours: s.hours, description: s.description, note: s.note,
+                   town: s.area_town, filler: !!s.filler, top: !!s.top };
+        }),
+        hasFiller: b.day.stops.some(function (s) { return s.filler; }),
+        night: last ? null : baseTown,
+        end: last ? 'Drop back at ' + startName + (b.back >= 0.5 ? ' (≈ ' + fmtH(b.back) + ')' : '') : null,
+        food: FOOD[distKey][fi % 3]
+      });
+    });
+
+    function fillDay(base, budget, used, covSoFar) {
+      var near = areaNames.filter(function (a) { return a === base || driveH(A[base], A[a]) <= NEAR_H; });
+      var pool = [];
+      near.forEach(function (a) {
+        (byArea[a] || []).forEach(function (p) {
+          if (used[p.idx] || !allowed(p)) return;
+          var extra = a === base ? 0 : driveH(A[base], A[a]);
+          pool.push({ p: p, extra: extra });
+        });
+      });
+      // order: matching must-see, matching, then filler must-see, other filler; same-area before nearby; data order
+      function rank(x) {
+        var m = wanted[x.p.category] ? 0 : 3;
+        return m + (STAR[x.p.place] ? -1 : x.p.top ? 0 : x.p.hard ? 2 : 1);   // hard treks only after easy places
+      }
+      pool.sort(function (a, b) { return rank(a) - rank(b) || a.extra - b.extra || a.p.idx - b.p.idx; });
+      var stops = [], time = 0, val = 0, hard = 0, cats = {}, areasUsed = {};
+      areasUsed[base] = 1;
+      function tryAdd(x, isFiller) {
+        if (stops.length >= 4) return false;
+        if (x.p.hard && hard) return false;
+        var big = x.p.hours >= 6;
+        if (big && stops.length) return false;
+        if (stops.length && stops[0].hours >= 6) return false;
+        var hop = areasUsed[x.p.area] ? 0 : x.extra;
+        var need = x.p.hours + (stops.length ? STOP_GAP_H : 0) + hop;
+        if (time + need > budget + 1e-9) return false;
+        // variety: don't take a 3rd stop of the same category while other matching categories exist
+        if (!isFiller && cats[x.p.category] >= 2 && interests.length && Object.keys(wanted).length > 1) {
+          var other = pool.some(function (y) { return !stops.some(function (s) { return s.idx === y.p.idx; }) && wanted[y.p.category] && y.p.category !== x.p.category && y.p.hours <= budget - time; });
+          if (other) return false;
+        }
+        var s = Object.assign({}, x.p, { filler: isFiller });
+        stops.push(s); time += need; val += value(x.p); if (x.p.hard) hard++;
+        cats[x.p.category] = (cats[x.p.category] || 0) + 1; areasUsed[x.p.area] = 1;
+        return true;
+      }
+      // first: one place for each chosen interest not yet covered on earlier days (scarcest interest first)
+      var open = interests.filter(function (i) { return !covSoFar[i]; }).map(function (i) {
+        var c = pool.filter(function (x) { return wanted[x.p.category] === i; });
+        return { i: i, c: c };
+      }).filter(function (o) { return o.c.length; }).sort(function (a, b) { return a.c.length - b.c.length || interests.indexOf(a.i) - interests.indexOf(b.i); });
+      open.forEach(function (o) { for (var j = 0; j < o.c.length; j++) if (tryAdd(o.c[j], false)) break; });
+      pool.forEach(function (x) { if ((wanted[x.p.category] || !interests.length) && !stops.some(function (s) { return s.idx === x.p.idx; })) tryAdd(x, false); });
+      // second pass for skipped matching places once variety is satisfied
+      pool.forEach(function (x) { if ((wanted[x.p.category] || !interests.length) && !stops.some(function (s) { return s.idx === x.p.idx; })) tryAdd(x, false); });
+      if (stops.length < 3) {
+        pool.forEach(function (x) {
+          if (stops.length >= 3) return;
+          if (wanted[x.p.category] || stops.some(function (s) { return s.idx === x.p.idx; })) return;
+          if (!x.p.top && stops.length >= 2) return;      // only must-see filler to reach the 3rd stop
+          tryAdd(x, true);
+        });
+      }
+      // order the day: same-area first, morning temples first, beaches towards the evening
+      var ORDER = { wildlife: -1, temple: 0, heritage: 1, fort: 2, waterfall: 3, nature: 4, adventure: 4, park: 5, island: 5, viewpoint: 6, beach: 7 };
+      stops.sort(function (a, b) {
+        var ea = a.area === base ? 0 : 1, eb = b.area === base ? 0 : 1;
+        return ea - eb || (ORDER[a.category] - ORDER[b.category]) || a.idx - b.idx;
+      });
+      return { stops: stops, value: val, time: time };
+    }
+
+    var missing = interests.filter(function (i) { return !covered[i]; });
+    var shown = interests.filter(function (i) { return covered[i]; });
+    var titleBits = (shown.length ? shown : interests).map(function (i) { return INTEREST_SHORT[i]; });
+    var title = days + (days === 1 ? ' Day: ' : ' Days: ') + joinAnd(titleBits) + ' from ' + startName;
+    var towns = []; out.forEach(function (x) { if (towns.indexOf(x.town) < 0) towns.push(x.town); });
+    var vehicle = people <= 4 ? '5-seater family car' : people <= 6 ? '7-seater family MUV' : people <= 10 ? '11-seater tempo traveller' : 'two or more vehicles';
+    return {
+      title: title,
+      summary: summary(out),
+      bestTime: interests.indexOf('Waterfalls') >= 0
+        ? 'Waterfalls are fullest August–November; October–March is pleasant overall.'
+        : 'October to March, after the monsoon, is the most pleasant time.',
+      missing: missing,
+      missingText: missing.length ? 'Couldn’t fit ' + joinAnd(missing.map(function (i) { return INTEREST_SHORT[i].toLowerCase(); })) +
+        ' in ' + days + (days === 1 ? ' day' : ' days') + ' from ' + startName + ' — try more days or another starting point.' : '',
+      days: out,
+      start: startName,
+      people: people,
+      vehicle: vehicle,
+      towns: towns
+    };
+  }
+
+  function summary(out) {
+    var ord = ['day one', 'day two', 'day three', 'day four'];
+    return out.map(function (d, i) { return d.town + ' on ' + ord[i]; }).join(', ').replace(/^./, function (c) { return c.toUpperCase(); }) + '.';
+  }
+  function rankLabels(arr) {
+    var c = {}, order = []; arr.forEach(function (x) { if (!c[x]) order.push(x); c[x] = (c[x] || 0) + 1; });
+    return order.sort(function (a, b) { return c[b] - c[a] || order.indexOf(a) - order.indexOf(b); });
+  }
+  function mostCommon(arr) {
+    var c = {}, best = null; arr.forEach(function (x) { c[x] = (c[x] || 0) + 1; if (!best || c[x] > c[best]) best = x; }); return best;
+  }
+  function joinAnd(a) { return a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' & ' + a[a.length - 1]; }
+
+  function whatsappText(P) {
+    var lines = ['Hi GR Tours & Travels, I\'d like this trip:', P.title,
+      'From: ' + P.start + ' · People: ' + P.people + ' · Vehicle: ' + P.vehicle];
+    P.days.forEach(function (d) {
+      lines.push('Day ' + d.day + ': ' + d.stops.map(function (s) { return s.place; }).join(', ') + (d.night ? ' (night: ' + d.night + ')' : ''));
+    });
+    lines.push('Please share the price and available dates.');
+    return lines.join('\n');
+  }
+
+  var api = { plan: plan, whatsappText: whatsappText, INTERESTS: INTERESTS };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.GRPlanner = api;
+})(typeof window !== "undefined" ? window : this);
+/*PLANNER-END*/</script>
 <script>
 (function(){
   const DATA = /*DATA-START*/{
 "neighbours":{"murdeshwar":["honnavar","byndoor"],"honnavar":["murdeshwar","kumta","jog"],"jog":["honnavar","siddapur"],"kumta":["honnavar","gokarna","yana","siddapur"],"gokarna":["kumta","ankola"],"yana":["kumta","sirsi","ankola"],"ankola":["gokarna","karwar","yana"],"karwar":["ankola","dandeli"],"dandeli":["karwar","yellapur"],"yellapur":["dandeli","sirsi"],"sirsi":["yellapur","siddapur","yana"],"siddapur":["sirsi","jog","kumta"],"byndoor":["murdeshwar","kollur","kundapura"],"kollur":["byndoor","kundapura"],"kundapura":["byndoor","kollur","udupi"],"udupi":["kundapura","karkala","mangaluru"],"karkala":["udupi","moodbidri"],"moodbidri":["karkala","mangaluru","dharmasthala"],"mangaluru":["udupi","moodbidri","dharmasthala"],"dharmasthala":["moodbidri","mangaluru","subramanya"],"subramanya":["dharmasthala"]},
+"areas":{"murdeshwar":{"lat":14.094,"lng":74.485},"honnavar":{"lat":14.28,"lng":74.444},"jog":{"lat":14.229,"lng":74.812},"kumta":{"lat":14.426,"lng":74.418},"gokarna":{"lat":14.548,"lng":74.318},"yana":{"lat":14.59,"lng":74.565},"ankola":{"lat":14.664,"lng":74.304},"karwar":{"lat":14.813,"lng":74.129},"dandeli":{"lat":15.249,"lng":74.618},"yellapur":{"lat":14.963,"lng":74.71},"sirsi":{"lat":14.62,"lng":74.835},"siddapur":{"lat":14.345,"lng":74.893},"byndoor":{"lat":13.866,"lng":74.633},"kollur":{"lat":13.864,"lng":74.813},"kundapura":{"lat":13.626,"lng":74.69},"udupi":{"lat":13.341,"lng":74.747},"karkala":{"lat":13.214,"lng":74.992},"moodbidri":{"lat":13.068,"lng":74.996},"mangaluru":{"lat":12.914,"lng":74.856},"dharmasthala":{"lat":12.947,"lng":75.381},"subramanya":{"lat":12.663,"lng":75.611}},
+"starts":{"Murdeshwar":{"lat":14.094,"lng":74.485},"Udupi":{"lat":13.341,"lng":74.747},"Mangaluru Airport":{"lat":12.961,"lng":74.89},"Goa":{"lat":15.381,"lng":73.834},"Hubballi Airport":{"lat":15.362,"lng":75.085}},
 "places":[
-{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Murdeshwar Temple & Shiva Statue","category":"temple","hours":2,"description":"Giant seated Shiva statue and the tall Raja Gopura on Kanduka hill, with the sea on three sides.","note":"Lift to the top of the gopura; dress modestly."},
-{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Murdeshwar Beach","category":"beach","hours":1.5,"description":"Rocky-edged beach right below the temple hill.","note":"Swim only where lifeguards allow."},
-{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Netrani Island","category":"island","hours":4,"description":"Small island off Murdeshwar known for scuba diving and snorkelling over coral reefs.","note":"Dives depend on sea conditions and season."},
-{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Bhatkal Lighthouse","category":"viewpoint","hours":1,"description":"Small hill near Bhatkal harbour with sea and harbour views.","note":""},
-{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Chandranatha Basadi, Bhatkal","category":"heritage","hours":1,"description":"Old Jain basadi in Bhatkal town.","note":""},
-{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Hadin Eco Beach","category":"beach","hours":1.5,"description":"Park-like beach campus with picnic spots near Bhatkal.","note":"Entry fee."},
-{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Bheemeshwara Temple & Falls","category":"waterfall","hours":4,"description":"Forest temple and waterfall off the Jog Falls road.","note":"Jeep, bike or trek access; best July–December."},
-{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Nastaar Beach","category":"beach","hours":1,"description":"Quiet beach with a huge rock, opposite Bhatkal lighthouse.","note":""},
-{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Idagunji Maha Ganapati Temple","category":"temple","hours":1.5,"description":"Much-visited Ganapati temple a short drive inland from Honnavar.","note":"Long queues on weekends."},
-{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Kasarkod Eco Beach","category":"beach","hours":1.5,"description":"Clean, Blue Flag certified beach near Honnavar.","note":""},
-{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Apsarakonda Falls & Beach","category":"waterfall","hours":1.5,"description":"Small waterfall, garden and temple beside a quiet beach, about 8 km from Honnavar.","note":""},
-{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Sharavathi Backwaters & Mangrove Boardwalk","category":"nature","hours":2,"description":"Calm backwaters and mangroves where the Sharavathi meets the sea.","note":"Boat rides best in the late afternoon."},
-{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Basavaraja Durga Island Fort","category":"fort","hours":3,"description":"Fortified island in the Arabian Sea off Honnavar.","note":"Boats depend on weather."},
-{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Ramatirtha","category":"temple","hours":0.5,"description":"Sacred spring-fed water tank (pushkarini).","note":""},
-{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Gerusoppa Chaturmukha Basadi","category":"heritage","hours":1.5,"description":"16th-century four-faced Jain temple in the Sharavathi valley.","note":""},
-{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Dhareshwar Beach","category":"beach","hours":1,"description":"Quiet fishing beach beside the highway between Kumta and Honnavar.","note":""},
-{"district":"Nearby (border)","area":"jog","area_town":"Jog","place":"Jog Falls","category":"waterfall","hours":2.5,"description":"One of India's highest plunge waterfalls, where the Sharavathi drops in four streams.","note":"Most water August–November; mist can hide the view."},
-{"district":"Uttara Kannada","area":"jog","area_town":"Jog","place":"Bangara Kusuma Falls","category":"waterfall","hours":2,"description":"Forest waterfall a few km north of Gerusoppa.","note":"Best after the monsoon."},
-{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Mirjan Fort","category":"fort","hours":1.5,"description":"16th-century laterite fort with moats and bastions, about 11 km from Kumta.","note":""},
-{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Dhareshwar Mahadev Temple","category":"temple","hours":1,"description":"Ancient black-stone temple near Kumta.","note":""},
-{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Alvekodi Beach","category":"beach","hours":1,"description":"Secluded, undeveloped beach near Kumta.","note":""},
-{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Burude (Dodmane) Falls","category":"waterfall","hours":3,"description":"Tall forest waterfall on the Siddapur–Kumta road.","note":"Walk to the base; slippery after rain."},
-{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Mahabaleshwar Temple","category":"temple","hours":1.5,"description":"Ancient granite temple of the Atmalinga, facing the sea.","note":"Traditional dress rules apply inside."},
-{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Koti Teertha","category":"temple","hours":0.5,"description":"Sacred temple tank in Gokarna town.","note":""},
-{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Om Beach","category":"beach","hours":2.5,"description":"Beach whose two curved coves together look like the Om symbol.","note":"Avoid swimming near the rocks."},
-{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Kudle Beach","category":"beach","hours":2,"description":"Wide, calm bay with palms and cafes.","note":"Stay for the sunset."},
-{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Half Moon Beach","category":"beach","hours":2,"description":"Quiet crescent cove by cliff trail or boat from Om Beach.","note":"Carry water; basic facilities."},
-{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Paradise Beach","category":"beach","hours":2,"description":"Small secluded cove further along the cliff trail.","note":"Trail or boat only."},
-{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Gokarna Main Beach","category":"beach","hours":1,"description":"Long town beach next to the temple street.","note":""},
-{"district":"Uttara Kannada","area":"yana","area_town":"Kumta","place":"Yana Rocks","category":"nature","hours":3,"description":"Two giant black karst rock peaks (Bhairaveshwara and Mohini) with a cave temple.","note":"Short forest walk; good shoes."},
-{"district":"Uttara Kannada","area":"yana","area_town":"Kumta","place":"Vibhooti Falls","category":"waterfall","hours":2,"description":"Zig-zag forest waterfall reached by a short walk near Yana.","note":"Trails slippery after rain."},
-{"district":"Uttara Kannada","area":"ankola","area_town":"Ankola","place":"Honnebail Beach","category":"beach","hours":1,"description":"Quiet beach near Ankola.","note":""},
-{"district":"Uttara Kannada","area":"ankola","area_town":"Ankola","place":"Donne Falls","category":"waterfall","hours":1.5,"description":"Small waterfall between Karwar and Ankola.","note":"Monsoon to winter only."},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Rabindranath Tagore Beach","category":"beach","hours":1.5,"description":"Karwar's long town beach with a promenade.","note":""},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"INS Chapal Warship Museum","category":"heritage","hours":1,"description":"A real warship turned into a museum on the beach.","note":"Check opening days."},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Rock Garden, Karwar","category":"park","hours":0.5,"description":"Sculpture garden next to the warship museum.","note":""},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Devbagh Beach","category":"beach","hours":2,"description":"Quiet beach where the Kali river meets the sea.","note":"Water sports in season."},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Majali Beach","category":"beach","hours":1,"description":"Long beach north of Karwar towards Goa.","note":""},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Kali River Bridge & Garden","category":"viewpoint","hours":0.5,"description":"River-mouth views; good for sunrise and sunset.","note":""},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Sadashivgad Fort","category":"fort","hours":1,"description":"Old hill fort above the Kali river bridge.","note":"Access may be restricted."},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Kurmagad Island","category":"island","hours":3,"description":"Island off Karwar reached by boat.","note":"Boats depend on permission and weather."},
-{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Oyster Rock Lighthouse","category":"island","hours":3,"description":"Offshore lighthouse seen on Karwar boat trips.","note":"Boat trips only."},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Kali River Rafting","category":"adventure","hours":3,"description":"White-water rafting, kayaking and coracle rides on the Kali river.","note":"Registered operators; season-dependent."},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Dandeli Wildlife Sanctuary (Kali Tiger Reserve)","category":"wildlife","hours":3,"description":"Large protected forest known for hornbills, kingfishers, gaur and deer.","note":"Early-morning safari is best."},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Syntheri Rocks","category":"nature","hours":1.5,"description":"Huge granite monolith carved by the Kaneri river.","note":"Steps down to the river."},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Kavala Caves","category":"nature","hours":2,"description":"Limestone caves with a natural Shiva linga, reached by over 350 steps.","note":"Carry a torch."},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Supa Dam & Backwaters","category":"nature","hours":1.5,"description":"Calm reservoir on the Kali river.","note":"Some areas restricted."},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Ganeshgudi","category":"nature","hours":2,"description":"Quiet forest village near Supa, known for birdwatching.","note":""},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Shiroli Peak","category":"viewpoint","hours":1.5,"description":"Dandeli's highest point, with Western Ghats views at sunset.","note":""},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Moulangi Eco Park","category":"park","hours":1.5,"description":"Family eco park among bamboo groves and forest streams.","note":""},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Anshi National Park","category":"wildlife","hours":3,"description":"Evergreen forest park in Joida taluk, part of the Kali Tiger Reserve.","note":""},
-{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Ulavi Channabasaveshwara Temple","category":"temple","hours":1.5,"description":"Pilgrimage temple deep in the Joida forests.","note":""},
-{"district":"Nearby (border)","area":"dandeli","area_town":"Dandeli","place":"Dudhsagar Falls","category":"waterfall","hours":4,"description":"Tall Mandovi river falls on the Goa border, crossed by the Konkan railway line.","note":"Access and permits vary by season."},
-{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Magod Falls","category":"waterfall","hours":2,"description":"Two-step fall of the Bedthi river into a deep forest gorge, about 17 km from Yellapur.","note":"Viewpoint only."},
-{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Sathodi Falls","category":"waterfall","hours":2.5,"description":"Wide forest waterfall into a clear pool, about 32 km from Yellapur.","note":"Go early."},
-{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Lalguli Falls","category":"waterfall","hours":1.5,"description":"Kali river falls about 13 km from Yellapur.","note":""},
-{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Jenukallu Gudda","category":"viewpoint","hours":1.5,"description":"Western Ghats peak in evergreen forest, about 17 km from Yellapur.","note":""},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sri Marikamba Temple","category":"temple","hours":1,"description":"Sirsi's famous goddess temple, known for its painted walls and big festival.","note":"Early morning is calmest."},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sri Mahaganapathi Temple, Sirsi","category":"temple","hours":0.5,"description":"Temple with a large Ganesha idol near the town centre.","note":""},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sahasralinga","category":"temple","hours":1.5,"description":"Hundreds of lingas carved on the rocks of the Shalmala river.","note":"Best when water is low."},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Banavasi Madhukeshwara Temple","category":"heritage","hours":1.5,"description":"Ancient carved temple in Banavasi, the old Kadamba capital.","note":""},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Shivaganga Falls","category":"waterfall","hours":2,"description":"Forest waterfall near Sonda dropping into a deep valley.","note":"Good grip shoes."},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Benne Hole Falls","category":"waterfall","hours":2.5,"description":"Forceful, creamy-white forest cascade near Kasage, off the Kumta road.","note":"Trek in; after monsoon."},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Swarnavalli Matha, Sonda","category":"temple","hours":1,"description":"Historic matha in the Sonda forests.","note":""},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Manjuguni Venkataramana Temple","category":"temple","hours":1,"description":"Hill temple known as the \"Tirupati of Karnataka\".","note":""},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Kailasa Gudda","category":"viewpoint","hours":1,"description":"Hill viewpoint over the forests near Sirsi.","note":""},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Gudavi Bird Sanctuary","category":"wildlife","hours":2,"description":"Lake sanctuary with many water birds.","note":"Best June–December."},
-{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Muregar Falls","category":"waterfall","hours":1.5,"description":"Forest waterfall near Muregar village.","note":""},
-{"district":"Uttara Kannada","area":"siddapur","area_town":"Siddapur","place":"Unchalli (Lushington) Falls","category":"waterfall","hours":2.5,"description":"Tall Aghanashini waterfall in deep forest.","note":"Walk down to the viewpoint."},
-{"district":"Uttara Kannada","area":"siddapur","area_town":"Siddapur","place":"Keppa Jog","category":"waterfall","hours":2,"description":"A smaller cousin of Jog Falls in the forest.","note":""},
-{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Ottinene Viewpoint & Beach","category":"viewpoint","hours":1.5,"description":"Hilltop view where a river meets the Arabian Sea.","note":""},
-{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Someshwara Beach & Temple, Byndoor","category":"beach","hours":1,"description":"Beach with a temple near Ottinene.","note":""},
-{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Koosalli Falls","category":"waterfall","hours":4,"description":"Forest falls near Byndoor reached by a 4 km trek.","note":"Trek; after monsoon."},
-{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Haklamane Falls","category":"waterfall","hours":2,"description":"Falls between Byndoor and Kollur.","note":""},
-{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Kollur Mookambika Temple","category":"temple","hours":2,"description":"Famous temple of Goddess Mookambika at the foot of the Kodachadri hills.","note":"Queues on festivals."},
-{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Belkal Theertha Falls","category":"waterfall","hours":4,"description":"Forest waterfall near Kollur reached by a 3 km trek.","note":"Best in the rainy season."},
-{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Arisina Gundi Falls","category":"waterfall","hours":3,"description":"Forest waterfall near Kollur.","note":"Trek."},
-{"district":"Nearby (border)","area":"kollur","area_town":"Kollur","place":"Kodachadri Peak","category":"viewpoint","hours":5,"description":"High Western Ghats peak reached by jeep or trek from Kollur.","note":"Long day; weather-dependent."},
-{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Maravanthe Beach","category":"beach","hours":1,"description":"Highway on a thin strip between the sea and the Souparnika river.","note":"Strong waves on the sea side."},
-{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Kodi Beach & Sea Walk","category":"beach","hours":1.5,"description":"River-mouth beach and sea walk near Kundapura.","note":""},
-{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Gangolli End Point & Lighthouse","category":"viewpoint","hours":1,"description":"Quiet river-mouth viewpoint and lighthouse rocks.","note":""},
-{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Anegudde Vinayaka Temple","category":"temple","hours":1,"description":"Well-known Ganesha temple at Kumbashi.","note":""},
-{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Kamalashile Brahmi Durgaparameshwari Temple","category":"temple","hours":1,"description":"Temple by the Kubja river.","note":""},
-{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Uppinakudru Puppet House","category":"heritage","hours":1,"description":"Yakshagana puppet exhibits near Kundapura.","note":""},
-{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Gulvadi Dam","category":"nature","hours":0.5,"description":"Scenic dam near Kundapura.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Sri Krishna Matha","category":"temple","hours":1.5,"description":"Famous 13th-century Krishna temple founded by Madhvacharya.","note":"Free temple meal at lunchtime."},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Anantheshwara & Chandramouleshwara Temples","category":"temple","hours":0.5,"description":"Ancient Shiva temples beside the Krishna Matha.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Malpe Beach","category":"beach","hours":1.5,"description":"Lively beach next to a big fishing harbour.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"St Mary's Island","category":"island","hours":2.5,"description":"Small islands with hexagonal basalt rock columns, by boat from Malpe.","note":"Boats run in season."},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Daria Bahadurgad Fort","category":"fort","hours":1.5,"description":"Ruined island fort about 2 km off Malpe.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kaup Beach & Lighthouse","category":"beach","hours":1,"description":"Long beach with an old lighthouse on the rocks and Kapu fort nearby.","note":"Go for sunset."},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Mattu Beach","category":"beach","hours":1,"description":"Secluded beach at the end of the Udyavara drive.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Padubidri Blue Flag Beach","category":"beach","hours":1.5,"description":"Blue Flag certified beach with lifeguards and facilities.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kodi Bengre Houseboats","category":"nature","hours":2,"description":"Houseboat rides on the backwaters near Udupi.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Manipal Lake & End Point","category":"viewpoint","hours":1,"description":"Lake and valley viewpoint in Manipal.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Hasta Shilpa Heritage Village, Manipal","category":"heritage","hours":2,"description":"Heritage village museum with old houses and crafts.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kemmannu Hanging Bridge","category":"nature","hours":1,"description":"Suspension bridge over the Swarna river with kayaking nearby.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Pajaka Kshetra","category":"temple","hours":1,"description":"Birthplace of Madhvacharya, with hilltop temples.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kunjarugiri Durga Temple","category":"temple","hours":1,"description":"Hilltop temple with 360° views near Udupi.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Barkur","category":"heritage","hours":1.5,"description":"Old Tulu capital with ancient temples, basadis and fort ruins.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Mandarthi Durgaparameshwari Temple","category":"temple","hours":1,"description":"Popular goddess temple north of Udupi.","note":""},
-{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Jumadi Island","category":"island","hours":3,"description":"Forested island by boat from Padubidri.","note":""},
-{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Karkala Gommateshwara (Bahubali) Statue","category":"heritage","hours":1,"description":"Giant monolithic Bahubali statue on a rock hill.","note":""},
-{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Chaturmukha Basadi, Karkala","category":"heritage","hours":0.5,"description":"Late-16th-century four-faced Jain temple.","note":""},
-{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Attur St Lawrence Church","category":"heritage","hours":0.5,"description":"Church from 1759, known for its annual festival.","note":""},
-{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Varanga Lake Basadi","category":"heritage","hours":1,"description":"Jain basadi in the middle of a lake near Hebri.","note":""},
-{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Kudlu Falls","category":"waterfall","hours":3,"description":"Forest waterfall near Hebri, reached by a moderate trek.","note":""},
-{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Jomlu Theertha Falls","category":"waterfall","hours":1.5,"description":"Small, safe waterfall near Belve.","note":""},
-{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Someshwara Wildlife Sanctuary","category":"wildlife","hours":3,"description":"Western Ghats forest sanctuary near Hebri.","note":""},
-{"district":"Nearby (border)","area":"karkala","area_town":"Karkala","place":"Agumbe Sunset Point","category":"viewpoint","hours":2,"description":"Rain-forest hill village with a famous sunset view.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Panambur Beach","category":"beach","hours":1.5,"description":"Popular, well-kept beach near the port, with water sports.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Tannirbhavi Beach","category":"beach","hours":1.5,"description":"Calm beach with sunset views and a tree park.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Surathkal Beach & Lighthouse","category":"beach","hours":1,"description":"Rocky beach with a lighthouse.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Sasihithlu Beach","category":"beach","hours":1,"description":"Quiet river-mouth beach through an acacia grove.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Ullal & Someshwara Beach","category":"beach","hours":1.5,"description":"Beaches south of the city with rocky outcrops.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kadri Manjunatha Temple","category":"temple","hours":1,"description":"Hilltop temple said to date from the 10th–11th century.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kudroli Gokarnanatha Temple","category":"temple","hours":1,"description":"Colourful temple famous for its Navaratri (Dasara) celebrations.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Mangaladevi Temple","category":"temple","hours":0.5,"description":"Temple of Goddess Mangaladevi that gives the city its name.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"St Aloysius Chapel","category":"heritage","hours":1,"description":"Chapel with walls and ceiling covered in old paintings.","note":"Photography rules apply."},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Milagres Church","category":"heritage","hours":0.5,"description":"One of Mangaluru's oldest churches.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Sultan Battery","category":"fort","hours":1,"description":"Black-stone watchtower built by Tipu Sultan by the river.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Ullal Dargah","category":"heritage","hours":0.5,"description":"Respected Sufi shrine at Ullal.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Pilikula Nisargadhama","category":"park","hours":3,"description":"Nature park with zoo, lake, science centre and heritage village.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Bejai Museum","category":"heritage","hours":1,"description":"City museum in a ship-shaped building.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kateel Durgaparameshwari Temple","category":"temple","hours":1,"description":"Temple on an islet in the Nandini river.","note":"Crowded on festivals."},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Batapady Mangrove Boat Ride","category":"nature","hours":1.5,"description":"Boat ride under mangroves south of the city.","note":""},
-{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Saavira Kambada Basadi","category":"heritage","hours":1,"description":"Thousand-pillar Jain temple from 1430.","note":""},
-{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Moodbidri Jain Basadis","category":"heritage","hours":1,"description":"Cluster of old Jain temples (basadis) along Basadi Road.","note":""},
-{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Venur Bahubali Statue","category":"heritage","hours":1,"description":"Monolithic Bahubali statue by the Phalguni river.","note":""},
-{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Dharmasthala Manjunatha Temple","category":"temple","hours":2,"description":"Major pilgrimage temple known for its free meals and charity.","note":"Traditional dress; long queues."},
-{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Manjusha Car Museum, Dharmasthala","category":"heritage","hours":1,"description":"Vintage car and heritage museum.","note":""},
-{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Dharmasthala Bahubali Hill","category":"heritage","hours":0.5,"description":"Monolithic Bahubali statue on a hill.","note":""},
-{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Sowthadka Ganapathi Temple","category":"temple","hours":0.5,"description":"Open-air Ganesha shrine hung with bells.","note":""},
-{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Jamalabad (Gadaikallu) Fort","category":"fort","hours":4,"description":"Hill fort on a steep rock near Belthangady.","note":"Steep climb; check if open before going."},
-{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Bandaje Falls","category":"waterfall","hours":6,"description":"Tall forest waterfall reached by a long trek.","note":"Long trek; go with a local guide."},
-{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Ermayi Falls","category":"waterfall","hours":2,"description":"Forest waterfall near Kajoor.","note":""},
-{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Didupe Falls","category":"waterfall","hours":2,"description":"Forest waterfall reached by an easy 2 km walk.","note":""},
-{"district":"Dakshina Kannada","area":"subramanya","area_town":"Subramanya","place":"Kukke Subramanya Temple","category":"temple","hours":2,"description":"Major pilgrimage temple of Lord Subramanya.","note":"Crowded on weekends."},
-{"district":"Dakshina Kannada","area":"subramanya","area_town":"Subramanya","place":"Kumara Parvatha Trek","category":"adventure","hours":10,"description":"One of Karnataka's toughest treks, starting at Kukke.","note":"Forest permit; full day."},
-{"district":"Dakshina Kannada","area":"subramanya","area_town":"Puttur","place":"Puttur Mahalingeshwara Temple","category":"temple","hours":0.5,"description":"Popular Shiva temple in Puttur.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Bantwal","place":"Karinjeshwara Hill Temple","category":"temple","hours":1.5,"description":"Hilltop temple near Bantwal with steps and wide views.","note":""},
-{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Bantwal","place":"Vitla Panchalingeshwara Temple","category":"temple","hours":0.5,"description":"Old Shiva temple in Vitla.","note":""}
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Murdeshwar Temple & Shiva Statue","category":"temple","hours":2,"description":"Giant seated Shiva statue and the tall Raja Gopura on Kanduka hill, with the sea on three sides.","note":"Lift to the top of the gopura; dress modestly.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Murdeshwar Beach","category":"beach","hours":1.5,"description":"Rocky-edged beach right below the temple hill.","note":"Swim only where lifeguards allow.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Netrani Island","category":"island","hours":4,"description":"Small island off Murdeshwar known for scuba diving and snorkelling over coral reefs.","note":"Dives depend on sea conditions and season.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Bhatkal Lighthouse","category":"viewpoint","hours":1,"description":"Small hill near Bhatkal harbour with sea and harbour views.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Chandranatha Basadi, Bhatkal","category":"heritage","hours":1,"description":"Old Jain basadi in Bhatkal town.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Hadin Eco Beach","category":"beach","hours":1.5,"description":"Park-like beach campus with picnic spots near Bhatkal.","note":"Entry fee.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Bheemeshwara Temple & Falls","category":"waterfall","hours":4,"description":"Forest temple and waterfall off the Jog Falls road.","note":"Jeep, bike or trek access; best July–December.","top":false,"hard":true},
+{"district":"Uttara Kannada","area":"murdeshwar","area_town":"Murdeshwar","place":"Nastaar Beach","category":"beach","hours":1,"description":"Quiet beach with a huge rock, opposite Bhatkal lighthouse.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Idagunji Maha Ganapati Temple","category":"temple","hours":1.5,"description":"Much-visited Ganapati temple a short drive inland from Honnavar.","note":"Long queues on weekends.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Kasarkod Eco Beach","category":"beach","hours":1.5,"description":"Clean, Blue Flag certified beach near Honnavar.","note":"","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Apsarakonda Falls & Beach","category":"waterfall","hours":1.5,"description":"Small waterfall, garden and temple beside a quiet beach, about 8 km from Honnavar.","note":"","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Sharavathi Backwaters & Mangrove Boardwalk","category":"nature","hours":2,"description":"Calm backwaters and mangroves where the Sharavathi meets the sea.","note":"Boat rides best in the late afternoon.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Basavaraja Durga Island Fort","category":"fort","hours":3,"description":"Fortified island in the Arabian Sea off Honnavar.","note":"Boats depend on weather.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Ramatirtha","category":"temple","hours":0.5,"description":"Sacred spring-fed water tank (pushkarini).","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Gerusoppa Chaturmukha Basadi","category":"heritage","hours":1.5,"description":"16th-century four-faced Jain temple in the Sharavathi valley.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"honnavar","area_town":"Honnavar","place":"Dhareshwar Beach","category":"beach","hours":1,"description":"Quiet fishing beach beside the highway between Kumta and Honnavar.","note":"","top":false,"hard":false},
+{"district":"Nearby (border)","area":"jog","area_town":"Jog","place":"Jog Falls","category":"waterfall","hours":2.5,"description":"One of India's highest plunge waterfalls, where the Sharavathi drops in four streams.","note":"Most water August–November; mist can hide the view.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"jog","area_town":"Jog","place":"Bangara Kusuma Falls","category":"waterfall","hours":2,"description":"Forest waterfall a few km north of Gerusoppa.","note":"Best after the monsoon.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Mirjan Fort","category":"fort","hours":1.5,"description":"16th-century laterite fort with moats and bastions, about 11 km from Kumta.","note":"","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Dhareshwar Mahadev Temple","category":"temple","hours":1,"description":"Ancient black-stone temple near Kumta.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Alvekodi Beach","category":"beach","hours":1,"description":"Secluded, undeveloped beach near Kumta.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"kumta","area_town":"Kumta","place":"Burude (Dodmane) Falls","category":"waterfall","hours":3,"description":"Tall forest waterfall on the Siddapur–Kumta road.","note":"Walk to the base; slippery after rain.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Mahabaleshwar Temple","category":"temple","hours":1.5,"description":"Ancient granite temple of the Atmalinga, facing the sea.","note":"Traditional dress rules apply inside.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Koti Teertha","category":"temple","hours":0.5,"description":"Sacred temple tank in Gokarna town.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Om Beach","category":"beach","hours":2.5,"description":"Beach whose two curved coves together look like the Om symbol.","note":"Avoid swimming near the rocks.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Kudle Beach","category":"beach","hours":2,"description":"Wide, calm bay with palms and cafes.","note":"Stay for the sunset.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Half Moon Beach","category":"beach","hours":2,"description":"Quiet crescent cove by cliff trail or boat from Om Beach.","note":"Carry water; basic facilities.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Paradise Beach","category":"beach","hours":2,"description":"Small secluded cove further along the cliff trail.","note":"Trail or boat only.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"gokarna","area_town":"Gokarna","place":"Gokarna Main Beach","category":"beach","hours":1,"description":"Long town beach next to the temple street.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"yana","area_town":"Kumta","place":"Yana Rocks","category":"nature","hours":3,"description":"Two giant black karst rock peaks (Bhairaveshwara and Mohini) with a cave temple.","note":"Short forest walk; good shoes.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"yana","area_town":"Kumta","place":"Vibhooti Falls","category":"waterfall","hours":2,"description":"Zig-zag forest waterfall reached by a short walk near Yana.","note":"Trails slippery after rain.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"ankola","area_town":"Ankola","place":"Honnebail Beach","category":"beach","hours":1,"description":"Quiet beach near Ankola.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"ankola","area_town":"Ankola","place":"Donne Falls","category":"waterfall","hours":1.5,"description":"Small waterfall between Karwar and Ankola.","note":"Monsoon to winter only.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Rabindranath Tagore Beach","category":"beach","hours":1.5,"description":"Karwar's long town beach with a promenade.","note":"","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"INS Chapal Warship Museum","category":"heritage","hours":1,"description":"A real warship turned into a museum on the beach.","note":"Check opening days.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Rock Garden, Karwar","category":"park","hours":0.5,"description":"Sculpture garden next to the warship museum.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Devbagh Beach","category":"beach","hours":2,"description":"Quiet beach where the Kali river meets the sea.","note":"Water sports in season.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Majali Beach","category":"beach","hours":1,"description":"Long beach north of Karwar towards Goa.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Kali River Bridge & Garden","category":"viewpoint","hours":0.5,"description":"River-mouth views; good for sunrise and sunset.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Sadashivgad Fort","category":"fort","hours":1,"description":"Old hill fort above the Kali river bridge.","note":"Access may be restricted.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Kurmagad Island","category":"island","hours":3,"description":"Island off Karwar reached by boat.","note":"Boats depend on permission and weather.","top":false,"hard":true},
+{"district":"Uttara Kannada","area":"karwar","area_town":"Karwar","place":"Oyster Rock Lighthouse","category":"island","hours":3,"description":"Offshore lighthouse seen on Karwar boat trips.","note":"Boat trips only.","top":false,"hard":true},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Kali River Rafting","category":"adventure","hours":3,"description":"White-water rafting, kayaking and coracle rides on the Kali river.","note":"Registered operators; season-dependent.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Dandeli Wildlife Sanctuary (Kali Tiger Reserve)","category":"wildlife","hours":3,"description":"Large protected forest known for hornbills, kingfishers, gaur and deer.","note":"Early-morning safari is best.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Syntheri Rocks","category":"nature","hours":1.5,"description":"Huge granite monolith carved by the Kaneri river.","note":"Steps down to the river.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Kavala Caves","category":"nature","hours":2,"description":"Limestone caves with a natural Shiva linga, reached by over 350 steps.","note":"Carry a torch.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Supa Dam & Backwaters","category":"nature","hours":1.5,"description":"Calm reservoir on the Kali river.","note":"Some areas restricted.","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Ganeshgudi","category":"nature","hours":2,"description":"Quiet forest village near Supa, known for birdwatching.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Shiroli Peak","category":"viewpoint","hours":1.5,"description":"Dandeli's highest point, with Western Ghats views at sunset.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Moulangi Eco Park","category":"park","hours":1.5,"description":"Family eco park among bamboo groves and forest streams.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Anshi National Park","category":"wildlife","hours":3,"description":"Evergreen forest park in Joida taluk, part of the Kali Tiger Reserve.","note":"","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"dandeli","area_town":"Dandeli","place":"Ulavi Channabasaveshwara Temple","category":"temple","hours":1.5,"description":"Pilgrimage temple deep in the Joida forests.","note":"","top":false,"hard":false},
+{"district":"Nearby (border)","area":"dandeli","area_town":"Dandeli","place":"Dudhsagar Falls","category":"waterfall","hours":4,"description":"Tall Mandovi river falls on the Goa border, crossed by the Konkan railway line.","note":"Access and permits vary by season.","top":false,"hard":true},
+{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Magod Falls","category":"waterfall","hours":2,"description":"Two-step fall of the Bedthi river into a deep forest gorge, about 17 km from Yellapur.","note":"Viewpoint only.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Sathodi Falls","category":"waterfall","hours":2.5,"description":"Wide forest waterfall into a clear pool, about 32 km from Yellapur.","note":"Go early.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Lalguli Falls","category":"waterfall","hours":1.5,"description":"Kali river falls about 13 km from Yellapur.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"yellapur","area_town":"Yellapur","place":"Jenukallu Gudda","category":"viewpoint","hours":1.5,"description":"Western Ghats peak in evergreen forest, about 17 km from Yellapur.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sri Marikamba Temple","category":"temple","hours":1,"description":"Sirsi's famous goddess temple, known for its painted walls and big festival.","note":"Early morning is calmest.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sri Mahaganapathi Temple, Sirsi","category":"temple","hours":0.5,"description":"Temple with a large Ganesha idol near the town centre.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Sahasralinga","category":"temple","hours":1.5,"description":"Hundreds of lingas carved on the rocks of the Shalmala river.","note":"Best when water is low.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Banavasi Madhukeshwara Temple","category":"heritage","hours":1.5,"description":"Ancient carved temple in Banavasi, the old Kadamba capital.","note":"","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Shivaganga Falls","category":"waterfall","hours":2,"description":"Forest waterfall near Sonda dropping into a deep valley.","note":"Good grip shoes.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Benne Hole Falls","category":"waterfall","hours":2.5,"description":"Forceful, creamy-white forest cascade near Kasage, off the Kumta road.","note":"Trek in; after monsoon.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Swarnavalli Matha, Sonda","category":"temple","hours":1,"description":"Historic matha in the Sonda forests.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Manjuguni Venkataramana Temple","category":"temple","hours":1,"description":"Hill temple known as the \"Tirupati of Karnataka\".","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Kailasa Gudda","category":"viewpoint","hours":1,"description":"Hill viewpoint over the forests near Sirsi.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Gudavi Bird Sanctuary","category":"wildlife","hours":2,"description":"Lake sanctuary with many water birds.","note":"Best June–December.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"sirsi","area_town":"Sirsi","place":"Muregar Falls","category":"waterfall","hours":1.5,"description":"Forest waterfall near Muregar village.","note":"","top":false,"hard":false},
+{"district":"Uttara Kannada","area":"siddapur","area_town":"Siddapur","place":"Unchalli (Lushington) Falls","category":"waterfall","hours":2.5,"description":"Tall Aghanashini waterfall in deep forest.","note":"Walk down to the viewpoint.","top":true,"hard":false},
+{"district":"Uttara Kannada","area":"siddapur","area_town":"Siddapur","place":"Keppa Jog","category":"waterfall","hours":2,"description":"A smaller cousin of Jog Falls in the forest.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Ottinene Viewpoint & Beach","category":"viewpoint","hours":1.5,"description":"Hilltop view where a river meets the Arabian Sea.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Someshwara Beach & Temple, Byndoor","category":"beach","hours":1,"description":"Beach with a temple near Ottinene.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Koosalli Falls","category":"waterfall","hours":4,"description":"Forest falls near Byndoor reached by a 4 km trek.","note":"Trek; after monsoon.","top":false,"hard":true},
+{"district":"Udupi","area":"byndoor","area_town":"Byndoor","place":"Haklamane Falls","category":"waterfall","hours":2,"description":"Falls between Byndoor and Kollur.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Kollur Mookambika Temple","category":"temple","hours":2,"description":"Famous temple of Goddess Mookambika at the foot of the Kodachadri hills.","note":"Queues on festivals.","top":true,"hard":false},
+{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Belkal Theertha Falls","category":"waterfall","hours":4,"description":"Forest waterfall near Kollur reached by a 3 km trek.","note":"Best in the rainy season.","top":false,"hard":true},
+{"district":"Udupi","area":"kollur","area_town":"Kollur","place":"Arisina Gundi Falls","category":"waterfall","hours":3,"description":"Forest waterfall near Kollur.","note":"Trek.","top":false,"hard":true},
+{"district":"Nearby (border)","area":"kollur","area_town":"Kollur","place":"Kodachadri Peak","category":"viewpoint","hours":5,"description":"High Western Ghats peak reached by jeep or trek from Kollur.","note":"Long day; weather-dependent.","top":false,"hard":true},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Maravanthe Beach","category":"beach","hours":1,"description":"Highway on a thin strip between the sea and the Souparnika river.","note":"Strong waves on the sea side.","top":true,"hard":false},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Kodi Beach & Sea Walk","category":"beach","hours":1.5,"description":"River-mouth beach and sea walk near Kundapura.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Gangolli End Point & Lighthouse","category":"viewpoint","hours":1,"description":"Quiet river-mouth viewpoint and lighthouse rocks.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Anegudde Vinayaka Temple","category":"temple","hours":1,"description":"Well-known Ganesha temple at Kumbashi.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Kamalashile Brahmi Durgaparameshwari Temple","category":"temple","hours":1,"description":"Temple by the Kubja river.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Uppinakudru Puppet House","category":"heritage","hours":1,"description":"Yakshagana puppet exhibits near Kundapura.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"kundapura","area_town":"Kundapura","place":"Gulvadi Dam","category":"nature","hours":0.5,"description":"Scenic dam near Kundapura.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Sri Krishna Matha","category":"temple","hours":1.5,"description":"Famous 13th-century Krishna temple founded by Madhvacharya.","note":"Free temple meal at lunchtime.","top":true,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Anantheshwara & Chandramouleshwara Temples","category":"temple","hours":0.5,"description":"Ancient Shiva temples beside the Krishna Matha.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Malpe Beach","category":"beach","hours":1.5,"description":"Lively beach next to a big fishing harbour.","note":"","top":true,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"St Mary's Island","category":"island","hours":2.5,"description":"Small islands with hexagonal basalt rock columns, by boat from Malpe.","note":"Boats run in season.","top":true,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Daria Bahadurgad Fort","category":"fort","hours":1.5,"description":"Ruined island fort about 2 km off Malpe.","note":"","top":true,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kaup Beach & Lighthouse","category":"beach","hours":1,"description":"Long beach with an old lighthouse on the rocks and Kapu fort nearby.","note":"Go for sunset.","top":true,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Mattu Beach","category":"beach","hours":1,"description":"Secluded beach at the end of the Udyavara drive.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Padubidri Blue Flag Beach","category":"beach","hours":1.5,"description":"Blue Flag certified beach with lifeguards and facilities.","note":"","top":true,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kodi Bengre Houseboats","category":"nature","hours":2,"description":"Houseboat rides on the backwaters near Udupi.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Manipal Lake & End Point","category":"viewpoint","hours":1,"description":"Lake and valley viewpoint in Manipal.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Hasta Shilpa Heritage Village, Manipal","category":"heritage","hours":2,"description":"Heritage village museum with old houses and crafts.","note":"","top":true,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kemmannu Hanging Bridge","category":"nature","hours":1,"description":"Suspension bridge over the Swarna river with kayaking nearby.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Pajaka Kshetra","category":"temple","hours":1,"description":"Birthplace of Madhvacharya, with hilltop temples.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Kunjarugiri Durga Temple","category":"temple","hours":1,"description":"Hilltop temple with 360° views near Udupi.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Barkur","category":"heritage","hours":1.5,"description":"Old Tulu capital with ancient temples, basadis and fort ruins.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Mandarthi Durgaparameshwari Temple","category":"temple","hours":1,"description":"Popular goddess temple north of Udupi.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"udupi","area_town":"Udupi","place":"Jumadi Island","category":"island","hours":3,"description":"Forested island by boat from Padubidri.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Karkala Gommateshwara (Bahubali) Statue","category":"heritage","hours":1,"description":"Giant monolithic Bahubali statue on a rock hill.","note":"","top":true,"hard":false},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Chaturmukha Basadi, Karkala","category":"heritage","hours":0.5,"description":"Late-16th-century four-faced Jain temple.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Attur St Lawrence Church","category":"heritage","hours":0.5,"description":"Church from 1759, known for its annual festival.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Varanga Lake Basadi","category":"heritage","hours":1,"description":"Jain basadi in the middle of a lake near Hebri.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Kudlu Falls","category":"waterfall","hours":3,"description":"Forest waterfall near Hebri, reached by a moderate trek.","note":"","top":false,"hard":true},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Jomlu Theertha Falls","category":"waterfall","hours":1.5,"description":"Small, safe waterfall near Belve.","note":"","top":false,"hard":false},
+{"district":"Udupi","area":"karkala","area_town":"Karkala","place":"Someshwara Wildlife Sanctuary","category":"wildlife","hours":3,"description":"Western Ghats forest sanctuary near Hebri.","note":"","top":false,"hard":false},
+{"district":"Nearby (border)","area":"karkala","area_town":"Karkala","place":"Agumbe Sunset Point","category":"viewpoint","hours":2,"description":"Rain-forest hill village with a famous sunset view.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Panambur Beach","category":"beach","hours":1.5,"description":"Popular, well-kept beach near the port, with water sports.","note":"","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Tannirbhavi Beach","category":"beach","hours":1.5,"description":"Calm beach with sunset views and a tree park.","note":"","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Surathkal Beach & Lighthouse","category":"beach","hours":1,"description":"Rocky beach with a lighthouse.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Sasihithlu Beach","category":"beach","hours":1,"description":"Quiet river-mouth beach through an acacia grove.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Ullal & Someshwara Beach","category":"beach","hours":1.5,"description":"Beaches south of the city with rocky outcrops.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kadri Manjunatha Temple","category":"temple","hours":1,"description":"Hilltop temple said to date from the 10th–11th century.","note":"","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kudroli Gokarnanatha Temple","category":"temple","hours":1,"description":"Colourful temple famous for its Navaratri (Dasara) celebrations.","note":"","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Mangaladevi Temple","category":"temple","hours":0.5,"description":"Temple of Goddess Mangaladevi that gives the city its name.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"St Aloysius Chapel","category":"heritage","hours":1,"description":"Chapel with walls and ceiling covered in old paintings.","note":"Photography rules apply.","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Milagres Church","category":"heritage","hours":0.5,"description":"One of Mangaluru's oldest churches.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Sultan Battery","category":"fort","hours":1,"description":"Black-stone watchtower built by Tipu Sultan by the river.","note":"","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Ullal Dargah","category":"heritage","hours":0.5,"description":"Respected Sufi shrine at Ullal.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Pilikula Nisargadhama","category":"park","hours":3,"description":"Nature park with zoo, lake, science centre and heritage village.","note":"","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Bejai Museum","category":"heritage","hours":1,"description":"City museum in a ship-shaped building.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Kateel Durgaparameshwari Temple","category":"temple","hours":1,"description":"Temple on an islet in the Nandini river.","note":"Crowded on festivals.","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Mangaluru","place":"Batapady Mangrove Boat Ride","category":"nature","hours":1.5,"description":"Boat ride under mangroves south of the city.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Saavira Kambada Basadi","category":"heritage","hours":1,"description":"Thousand-pillar Jain temple from 1430.","note":"","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Moodbidri Jain Basadis","category":"heritage","hours":1,"description":"Cluster of old Jain temples (basadis) along Basadi Road.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"moodbidri","area_town":"Moodbidri","place":"Venur Bahubali Statue","category":"heritage","hours":1,"description":"Monolithic Bahubali statue by the Phalguni river.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Dharmasthala Manjunatha Temple","category":"temple","hours":2,"description":"Major pilgrimage temple known for its free meals and charity.","note":"Traditional dress; long queues.","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Manjusha Car Museum, Dharmasthala","category":"heritage","hours":1,"description":"Vintage car and heritage museum.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Dharmasthala Bahubali Hill","category":"heritage","hours":0.5,"description":"Monolithic Bahubali statue on a hill.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Sowthadka Ganapathi Temple","category":"temple","hours":0.5,"description":"Open-air Ganesha shrine hung with bells.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Jamalabad (Gadaikallu) Fort","category":"fort","hours":4,"description":"Hill fort on a steep rock near Belthangady.","note":"Steep climb; check if open before going.","top":false,"hard":true},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Bandaje Falls","category":"waterfall","hours":6,"description":"Tall forest waterfall reached by a long trek.","note":"Long trek; go with a local guide.","top":false,"hard":true},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Ermayi Falls","category":"waterfall","hours":2,"description":"Forest waterfall near Kajoor.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"dharmasthala","area_town":"Dharmasthala","place":"Didupe Falls","category":"waterfall","hours":2,"description":"Forest waterfall reached by an easy 2 km walk.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"subramanya","area_town":"Subramanya","place":"Kukke Subramanya Temple","category":"temple","hours":2,"description":"Major pilgrimage temple of Lord Subramanya.","note":"Crowded on weekends.","top":true,"hard":false},
+{"district":"Dakshina Kannada","area":"subramanya","area_town":"Subramanya","place":"Kumara Parvatha Trek","category":"adventure","hours":10,"description":"One of Karnataka's toughest treks, starting at Kukke.","note":"Forest permit; full day.","top":false,"hard":true},
+{"district":"Dakshina Kannada","area":"subramanya","area_town":"Puttur","place":"Puttur Mahalingeshwara Temple","category":"temple","hours":0.5,"description":"Popular Shiva temple in Puttur.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Bantwal","place":"Karinjeshwara Hill Temple","category":"temple","hours":1.5,"description":"Hilltop temple near Bantwal with steps and wide views.","note":"","top":false,"hard":false},
+{"district":"Dakshina Kannada","area":"mangaluru","area_town":"Bantwal","place":"Vitla Panchalingeshwara Temple","category":"temple","hours":0.5,"description":"Old Shiva temple in Vitla.","note":"","top":false,"hard":false}
 ]}/*DATA-END*/;
 
-  // --- planner engine (pure, no DOM) ---
-  var Planner = (function(DATA){
-    var INTERESTS = [
-      {k:'waterfalls', label:'Waterfalls', short:'Waterfalls', icon:'waterfall', cats:['waterfall']},
-      {k:'beaches', label:'Beaches & Islands', short:'Beaches', icon:'beach', cats:['beach','island']},
-      {k:'temples', label:'Temples & Heritage', short:'Temples', icon:'temple', cats:['temple','heritage']},
-      {k:'nature', label:'Nature & Adventure', short:'Nature', icon:'nature', cats:['nature','viewpoint','park','adventure']},
-      {k:'wildlife', label:'Wildlife', short:'Wildlife', icon:'wildlife', cats:['wildlife']},
-      {k:'forts', label:'Historical Forts', short:'Forts', icon:'fort', cats:['fort']}
-    ];
-    var STARTS = [
-      {k:'murdeshwar', label:'Murdeshwar', area:'murdeshwar'},
-      {k:'udupi', label:'Udupi', area:'udupi'},
-      {k:'mangaluru', label:'Mangaluru Airport', area:'mangaluru'},
-      {k:'goa', label:'Goa', area:'karwar'},
-      {k:'hubballi', label:'Hubballi Airport', area:'yellapur'}
-    ];
-    // long treks, permits or restricted access
-    var HARD = {};
-    ['Kumara Parvatha Trek','Bandaje Falls','Koosalli Falls','Belkal Theertha Falls','Arisina Gundi Falls','Kudlu Falls','Kodachadri Peak',
-     'Jamalabad (Gadaikallu) Fort','Bheemeshwara Temple & Falls','Dudhsagar Falls','Kurmagad Island','Oyster Rock Lighthouse'].forEach(function(n){ HARD[n] = 1; });
-    var BUDGET = 7.5, MAX_STOPS = 4, WHOLE_DAY = 6;
-    var CAT = {temple:['temple','temples'], beach:['beach','beaches'], waterfall:['waterfall','waterfalls'], heritage:['heritage','heritage'],
-      viewpoint:['viewpoint','viewpoints'], nature:['nature','nature'], fort:['fort','forts'], island:['island','islands'],
-      wildlife:['wildlife','wildlife'], park:['park','parks'], adventure:['adventure','adventure']};
-    var GHATS = {sirsi:1, siddapur:1, yellapur:1, dandeli:1};
-    var TIPS = ['Start early — our driver knows these roads.','Swim only at safe, flagged spots; avoid rocks and strong currents.',
-      'Network is weak near forest waterfalls; carry some cash.','Scuba, rafting, island boats and treks depend on season and weather.'];
-    var NUM = ['one','two','three','four'];
-
-    var NB = DATA.neighbours || {}, PLACES = DATA.places || [];
-    var AREAS = Object.keys(NB).sort();
-    var ORDER = {}; PLACES.forEach(function(p, i){ ORDER[p.place] = i; });
-    function cmp(a, b){ return a < b ? -1 : a > b ? 1 : 0; }
-    function majority(list){
-      var c = {}, best = null;
-      list.forEach(function(x){ c[x] = (c[x] || 0) + 1; if (best === null || c[x] > c[best]) best = x; });
-      return best;
-    }
-    var AREA = {};
-    AREAS.forEach(function(a){
-      var ps = PLACES.filter(function(p){ return p.area === a; });
-      AREA[a] = {
-        town: majority(ps.map(function(p){ return p.area_town; })) || a,
-        district: majority(ps.map(function(p){ return p.district; }).filter(function(d){ return d.indexOf('Nearby') < 0; })) || 'Uttara Kannada'
-      };
-    });
-    function foods(area){
-      var d = AREA[area].district;
-      if (d === 'Udupi') return ['Udupi vegetarian thali','Goli baje and filter coffee','Masala dosa'];
-      if (d === 'Dakshina Kannada') return ['Kori rotti','Mangalorean fish curry','Mangalore buns'];
-      return GHATS[area] ? ['Jolada rotti with ennegai','Kadubu with coconut chutney'] : ['Neer dosa with fish curry','Kadubu with coconut chutney'];
-    }
-    function hopsFrom(start){
-      var h = {}, q = [start]; h[start] = 0;
-      while (q.length){ var a = q.shift(); (NB[a] || []).forEach(function(b){ if (h[b] === undefined){ h[b] = h[a] + 1; q.push(b); } }); }
-      return h;
-    }
-    function vehicleFor(n){
-      return n <= 4 ? '5-seater family car' : n <= 6 ? '7-seater family MUV' : n <= 10 ? '11-seater tempo traveller' : 'two or more vehicles';
-    }
-    function joinAnd(list){ return list.length < 2 ? (list[0] || '') : list.slice(0, -1).join(', ') + ' & ' + list[list.length - 1]; }
-    function joinWords(list){ return list.length < 2 ? (list[0] || '') : list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1]; }
-    function clamp(v, lo, hi, dflt){ v = parseInt(v, 10); return isNaN(v) ? dflt : Math.min(hi, Math.max(lo, v)); }
-
-    function plan(input){
-      var D = clamp(input.days, 1, 4, 2), N = clamp(input.people, 1, 40, 4);
-      var start = STARTS.filter(function(s){ return s.k === input.start; })[0] || STARTS[0];
-      var picked = INTERESTS.filter(function(i){ return (input.interests || []).indexOf(i.k) >= 0; });
-      var cats = {}; picked.forEach(function(i){ i.cats.forEach(function(c){ cats[c] = 1; }); });
-      var hardOK = (input.interests || []).indexOf('nature') >= 0 && N < 8;
-      var hops = hopsFrom(start.area), maxHop = D <= 2 ? 1 : 2;
-      var allowed = AREAS.filter(function(a){ return hops[a] !== undefined && hops[a] <= maxHop; });
-      var isAllowed = {}; allowed.forEach(function(a){ isAllowed[a] = 1; });
-      var used = {};
-
-      function match(p){ return !!cats[p.category]; }
-      function pts(p){ return match(p) ? 20 : 2; }            // 2 and 0.2, kept as integers so ties are exact
-      function usable(p){ return !used[p.place] && (!HARD[p.place] || hardOK); }
-      function rem(a){ return PLACES.filter(function(p){ return p.area === a && usable(p); }); }
-      function remScore(a){ return rem(a).reduce(function(s, p){ return s + pts(p); }, 0); }
-      function remMatch(a){ return rem(a).filter(match).length; }
-      function byArea(x, y){ return remScore(y) - remScore(x) || (hops[x] || 0) - (hops[y] || 0) || cmp(x, y); }
-      function byPlace(x, y){ return pts(y) - pts(x) || y.hours - x.hours || ORDER[x.place] - ORDER[y.place]; }
-
-      function nextArea(prev, visited){
-        var near = (NB[prev] || []).filter(function(a){ return isAllowed[a] && !visited[a]; }).sort(byArea);
-        if (near.length && remMatch(near[0]) >= 2) return near[0];
-        if (remMatch(prev) >= 2) return prev;                 // stay: it still has good matching places
-        var all = allowed.filter(function(a){ return !visited[a] && rem(a).length; }).sort(byArea);
-        if (all.length && remMatch(all[0]) >= 1) return all[0];
-        if (near.length && rem(near[0]).length) return near[0];
-        if (all.length) return all[0];
-        var any = allowed.filter(function(a){ return rem(a).length; }).sort(byArea);
-        return any[0] || prev;
-      }
-
-      function fillDay(area, isLast, visited){
-        var stops = [], hrs = 0, hard = 0, areas = [area], general = false;
-        function whole(){ return stops.some(function(s){ return s.hours >= WHOLE_DAY; }); }
-        function canAdd(p){
-          if (used[p.place] || stops.length >= MAX_STOPS || whole()) return false;
-          if (p.hours >= WHOLE_DAY) return stops.length === 0;
-          if (hrs + p.hours > BUDGET) return false;
-          if (HARD[p.place] && hard >= 1) return false;
-          return true;
-        }
-        function add(p){ stops.push(p); used[p.place] = 1; hrs += p.hours; if (HARD[p.place]) hard++; if (!match(p)) general = true; }
-        function takeMatching(a){
-          var cand = rem(a).filter(match).sort(byPlace), later = [];
-          cand.forEach(function(p){
-            if (!canAdd(p)) return;
-            if (p.category === 'beach'){
-              var b = stops.filter(function(s){ return s.category === 'beach'; }).length;
-              var o = stops.filter(function(s){ return s.category !== 'beach' && match(s); }).length;
-              var other = cand.some(function(q){ return q !== p && q.category !== 'beach' && canAdd(q); });
-              if (b > o && other){ later.push(p); return; }   // keep beaches from piling up when other interests exist
-            }
-            add(p);
-          });
-          later.forEach(function(p){ if (canAdd(p)) add(p); });
-        }
-        function takeGeneral(a){
-          rem(a).sort(byPlace).forEach(function(p){ if ((stops.length < 2 || hrs < 4) && canAdd(p)) add(p); });
-        }
-
-        takeMatching(area);
-        var nextA = isLast ? null : nextArea(area, visited);
-        if (!whole() && stops.length < MAX_STOPS && BUDGET - hrs >= 1){
-          var ons = (NB[area] || []).filter(function(a){
-            return isAllowed[a] && !visited[a] && a !== nextA && rem(a).some(function(p){ return match(p) && canAdd(p); });
-          }).sort(byArea);
-          if (ons.length){ areas.push(ons[0]); takeMatching(ons[0]); }
-        }
-        var matched = stops.filter(match).length;
-        if (matched < 2 || (hrs < 4 && stops.length < MAX_STOPS)){
-          areas.forEach(takeGeneral);
-          if (stops.length < 2 && areas.length < 2){
-            var nb = (NB[area] || []).filter(function(a){ return isAllowed[a] && a !== nextA && rem(a).some(canAdd); }).sort(byArea)[0]
-                  || (NB[area] || []).filter(function(a){ return rem(a).some(canAdd); }).sort(byArea)[0];
-            if (nb){ areas.push(nb); takeGeneral(nb); }
-          }
-        }
-        // order: by area as visited, and no two beaches in a row when something else is there to put between them
-        var ordered = [], prevBeach = false;
-        areas.forEach(function(a){
-          var rest = stops.filter(function(s){ return s.area === a; });
-          while (rest.length){
-            var beaches = rest.filter(function(s){ return s.category === 'beach'; }).length;
-            var i = prevBeach ? rest.findIndex(function(s){ return s.category !== 'beach'; })
-                  : beaches > rest.length - beaches ? rest.findIndex(function(s){ return s.category === 'beach'; }) : 0;
-            if (i < 0) i = 0;
-            var s = rest.splice(i, 1)[0]; ordered.push(s); prevBeach = s.category === 'beach';
-          }
-        });
-        var usedAreas = areas.filter(function(a){ return ordered.some(function(s){ return s.area === a; }); });
-        return {area: area, areas: usedAreas, stops: ordered, hours: hrs, general: general, matched: matched};
-      }
-
-      var visited = {}, days = [], prev = null, foodUsed = {};
-      for (var d = 0; d < D; d++){
-        var area = d === 0 ? start.area : nextArea(prev, visited);
-        visited[area] = 1;
-        var day = fillDay(area, d === D - 1, visited);
-        // theme: day town + its main category (interests first)
-        var pool = day.stops.filter(match); if (!pool.length) pool = day.stops;
-        var count = {}, main = null;
-        pool.forEach(function(s){ count[s.category] = (count[s.category] || 0) + 1; });
-        pool.forEach(function(s){ if (main === null || count[s.category] > count[main]) main = s.category; });
-        var town = AREA[area].town, words = CAT[main] || [main, main];
-        day.theme = main ? town + ' ' + words[count[main] > 1 ? 1 : 0] : town;
-        var lastArea = day.stops.length ? day.stops[day.stops.length - 1].area : area;
-        day.night = d === D - 1 ? null : AREA[lastArea].town;
-        var opts = foods(area), yday = days.length ? days[days.length - 1].food : null;
-        var dish = opts.filter(function(f){ return f !== yday; }).sort(function(x, y){ return (foodUsed[x] || 0) - (foodUsed[y] || 0) || opts.indexOf(x) - opts.indexOf(y); })[0] || opts[0];
-        foodUsed[dish] = (foodUsed[dish] || 0) + 1; day.food = dish;
-        day.towns = day.areas.map(function(a){ return AREA[a].town; }).filter(function(t, i, arr){ return arr.indexOf(t) === i; });
-        day.n = d + 1;
-        days.push(day); prev = area;
-      }
-
-      var shorts = picked.map(function(i){ return i.short; });
-      var title = D + (D > 1 ? ' Days: ' : ' Day: ') + joinAnd(shorts) + ' from ' + start.label;
-      var runs = [];
-      days.forEach(function(dy){
-        var key = dy.towns.join('|'), last = runs[runs.length - 1];
-        if (last && last.key === key) last.to = dy.n; else runs.push({key: key, towns: dy.towns, from: dy.n, to: dy.n});
-      });
-      var summary = D === 1 ? joinWords(days[0].towns) + ' in one day.'
-        : runs.map(function(r){
-            var when = r.from === r.to ? 'day ' + NUM[r.from - 1]
-              : r.to - r.from === 1 ? 'days ' + NUM[r.from - 1] + ' and ' + NUM[r.to - 1] : 'days ' + NUM[r.from - 1] + ' to ' + NUM[r.to - 1];
-            return joinWords(r.towns) + ' on ' + when;
-          }).join(', ') + '.';
-      var waterfalls = (input.interests || []).indexOf('waterfalls') >= 0;
-      var bestTime = waterfalls ? 'Waterfalls are fullest August–November; October–March is pleasant overall.'
-                                : 'October to March, after the monsoon, is the most pleasant time.';
-      var vehicle = vehicleFor(N);
-      var wa = ['Hi GR Tours & Travels, I\'d like this trip:', title, 'From: ' + start.label + ' · People: ' + N + ' · Vehicle: ' + vehicle];
-      days.forEach(function(dy){
-        wa.push('Day ' + dy.n + ': ' + dy.stops.map(function(s){ return s.place; }).join(', ') + (dy.night ? ' (night: ' + dy.night + ')' : ' (drop back at ' + start.label + ')'));
-      });
-      wa.push('Please share the price and available dates.');
-      return {title: title, summary: summary, bestTime: bestTime, days: days, vehicle: vehicle, people: N, start: start, nDays: D,
-              tips: TIPS, waText: wa.join('\n'), interests: picked.map(function(i){ return i.k; })};
-    }
-    return {plan: plan, INTERESTS: INTERESTS, STARTS: STARTS, CAT: CAT, HARD: HARD, AREA: AREA, hopsFrom: hopsFrom};
-  })(DATA);
-  // --- end planner engine ---
+  // chips shown in the form; GRPlanner (planner.js) takes their labels
+  var STARTS = [
+    {k:'murdeshwar', label:'Murdeshwar'}, {k:'udupi', label:'Udupi'}, {k:'mangaluru', label:'Mangaluru Airport'},
+    {k:'goa', label:'Goa'}, {k:'hubballi', label:'Hubballi Airport'}
+  ];
+  var INTERESTS = [
+    {k:'waterfalls', label:'Waterfalls', icon:'waterfall'},
+    {k:'beaches', label:'Beaches & Islands', icon:'beach'},
+    {k:'temples', label:'Temples & Heritage', icon:'temple'},
+    {k:'nature', label:'Nature & Adventure', icon:'nature'},
+    {k:'wildlife', label:'Wildlife', icon:'wildlife'},
+    {k:'forts', label:'Historical Forts', icon:'fort'}
+  ];
+  var TIPS = ['Start early — our driver knows these roads.','Swim only at safe, flagged spots; avoid rocks and strong currents.',
+    'Network is weak near forest waterfalls; carry some cash.','Scuba, rafting, island boats and treks depend on season and weather.'];
+  function makePlan(){
+    var start = STARTS.filter(function(x){ return x.k === state.start; })[0] || STARTS[0];
+    return window.GRPlanner.plan(DATA, {days: state.days, start: start.label, people: state.people,
+      interests: INTERESTS.filter(function(i){ return state.interests.indexOf(i.k) >= 0; }).map(function(i){ return i.label; })});
+  }
 
   var root = document.getElementById('tp');
   if (!root) return;
@@ -608,8 +714,8 @@ body{background:#EEF4FB;color:#1e293b;font-family:var(--f);-webkit-font-smoothin
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (saved && typeof saved === 'object'){
       if ([1,2,3,4].indexOf(saved.days) >= 0) state.days = saved.days;
-      if (Planner.STARTS.some(function(s){ return s.k === saved.start; })) state.start = saved.start;
-      if (Array.isArray(saved.interests)) state.interests = saved.interests.filter(function(k){ return Planner.INTERESTS.some(function(i){ return i.k === k; }); });
+      if (STARTS.some(function(s){ return s.k === saved.start; })) state.start = saved.start;
+      if (Array.isArray(saved.interests)) state.interests = saved.interests.filter(function(k){ return INTERESTS.some(function(i){ return i.k === k; }); });
       if (saved.people >= 1 && saved.people <= 40) state.people = Math.round(saved.people);
     }
   } catch (e) {}
@@ -619,8 +725,8 @@ body{background:#EEF4FB;color:#1e293b;font-family:var(--f);-webkit-font-smoothin
 
   // ---- form ----
   daysEl.innerHTML = [1,2,3,4].map(function(n){ return '<button type="button" role="radio" data-v="' + n + '" aria-label="' + n + (n > 1 ? ' days' : ' day') + '">' + n + '</button>'; }).join('');
-  startsEl.innerHTML = Planner.STARTS.map(function(s){ return '<button type="button" role="radio" data-v="' + s.k + '">' + esc(s.label) + '</button>'; }).join('');
-  intsEl.innerHTML = Planner.INTERESTS.map(function(i){
+  startsEl.innerHTML = STARTS.map(function(s){ return '<button type="button" role="radio" data-v="' + s.k + '">' + esc(s.label) + '</button>'; }).join('');
+  intsEl.innerHTML = INTERESTS.map(function(i){
     return '<button type="button" role="checkbox" data-v="' + i.k + '"><span class="tp-ck">' + icon('check') + '</span>' + icon(i.icon) + '<span>' + esc(i.label) + '</span></button>';
   }).join('');
 
@@ -671,44 +777,52 @@ body{background:#EEF4FB;color:#1e293b;font-family:var(--f);-webkit-font-smoothin
       intsEl.classList.remove('shake'); void intsEl.offsetWidth; intsEl.classList.add('shake');
       return;
     }
-    showPlan(Planner.plan(state));
+    showPlan(makePlan(), state.days);
   });
   intsEl.addEventListener('animationend', function(){ intsEl.classList.remove('shake'); });
 
   // ---- plan ----
   var current = null;
   function hrs(h){ return '≈ ' + (Math.round(h * 10) / 10) + ' h'; }
-  function showPlan(p){
+  function showPlan(p, nDays){
     current = p;
     var k = 0, html = '';
-    html += '<h3 class="tp-pt" tabindex="-1">' + esc(p.title) + '</h3>';
-    html += '<p class="tp-ps">' + esc(p.summary.charAt(0).toUpperCase() + p.summary.slice(1)) + '</p>';
-    html += '<p class="tp-best">' + icon('sun') + '<span><b>Best time:</b> ' + esc(p.bestTime) + '</span></p>';
-    p.days.forEach(function(d){
-      html += '<section class="tp-day"><div class="tp-dh"><h4>Day ' + d.n + ': ' + esc(d.theme) + '</h4><span class="tp-pill">DAY ' + d.n + '</span></div>';
-      if (d.general) html += '<p class="tp-fill">Added nearby highlights</p>';
-      html += '<ol class="tp-stops">';
-      d.stops.forEach(function(s){
-        html += '<li class="tp-stop" style="--i:' + (k++) + '"><span class="tp-si">' + icon(s.category) + '</span><div>' +
+    function stops(list){
+      return '<ol class="tp-stops">' + list.map(function(s){
+        return '<li class="tp-stop" style="--i:' + (k++) + '"><span class="tp-si">' + icon(s.category) + '</span><div>' +
           '<p class="tp-sn">' + esc(s.place) + '<span class="tp-cat">' + esc(s.category) + '</span><span class="tp-hr">' + hrs(s.hours) + '</span></p>' +
           '<p class="tp-sd">' + esc(s.description) + '</p>' + (s.note ? '<p class="tp-sv">💡 ' + esc(s.note) + '</p>' : '') + '</div></li>';
-      });
-      html += '</ol>';
-      html += '<p class="tp-meta">' + (d.night ? '<b>Night stay:</b> ' + esc(d.night) + ' — rooms arranged on request' : '<b>Drop back at</b> ' + esc(p.start.label)) +
+      }).join('') + '</ol>';
+    }
+    html += '<h3 class="tp-pt" tabindex="-1">' + esc(p.title) + '</h3>';
+    html += '<p class="tp-ps">' + esc(p.summary) + '</p>';
+    if (p.missingText) html += '<p class="tp-miss">' + esc(p.missingText) + '</p>';
+    html += '<p class="tp-best">' + icon('sun') + '<span><b>Best time:</b> ' + esc(p.bestTime) + '</span></p>';
+    p.days.forEach(function(d){
+      var main = d.stops.filter(function(s){ return !s.filler; }), extra = d.stops.filter(function(s){ return s.filler; });
+      html += '<section class="tp-day"><div class="tp-dh"><h4>Day ' + d.day + ': ' + esc(d.theme) + '</h4><span class="tp-pill">DAY ' + d.day + '</span></div>';
+      if (d.driveText) html += '<p class="tp-drive">' + esc(d.driveText) + '</p>';
+      if (main.length) html += stops(main);
+      if (extra.length) html += '<p class="tp-also">Also nearby</p>' + stops(extra);
+      html += '<p class="tp-meta">' + (d.night ? '<b>Night stay:</b> ' + esc(d.night) + ' — rooms arranged on request' : endHtml(d.end)) +
               '<br><b>Local food:</b> ' + esc(d.food) + '</p></section>';
     });
     html += '<p class="tp-veh lg">' + icon('van') + '<span>Suggested: <b>' + esc(p.vehicle) + '</b> for ' + p.people + (p.people > 1 ? ' people' : ' person') + '</span></p>';
-    html += '<div class="tp-tips"><h4>Travel tips</h4><ul>' + p.tips.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
-    html += '<a class="tp-book" href="https://wa.me/' + WA + '?text=' + encodeURIComponent(p.waText) + '" target="_blank" rel="noopener"><span class="tp-wa">' + icon('wa', '') + '</span><span>Book this plan on WhatsApp</span></a>';
+    html += '<div class="tp-tips"><h4>Travel tips</h4><ul>' + TIPS.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
+    html += '<a class="tp-book" href="https://wa.me/' + WA + '?text=' + encodeURIComponent(window.GRPlanner.whatsappText(p)) + '" target="_blank" rel="noopener"><span class="tp-wa">' + icon('wa', '') + '</span><span>Book this plan on WhatsApp</span></a>';
     html += '<div class="tp-row"><button type="button" class="lg tp-again">' + icon('back', '') + 'Plan another trip</button><button type="button" class="lg tp-copy">' + icon('copy', '') + '<span>Copy plan</span></button></div>';
     html += '<p class="tp-fine">Price on WhatsApp · depends on vehicle &amp; group size</p>';
     planEl.innerHTML = html;
     form.hidden = true; planEl.hidden = false;
     title.textContent = 'Your trip plan';
     sub.setAttribute('data-step', 'plan');
-    sub.querySelector('.d').textContent = p.nDays + (p.nDays > 1 ? ' days' : ' day') + ' · ' + p.people + (p.people > 1 ? ' people' : ' person') + ' · from ' + p.start.label;
+    sub.querySelector('.d').textContent = nDays + (nDays > 1 ? ' days' : ' day') + ' · ' + p.people + (p.people > 1 ? ' people' : ' person') + ' · from ' + p.start;
     body.scrollTop = 0;
     planEl.querySelector('.tp-pt').focus({preventScroll: true});
+  }
+  function endHtml(end){
+    var lead = 'Drop back at ';
+    return end.indexOf(lead) === 0 ? '<b>Drop back at</b> ' + esc(end.slice(lead.length)) : esc(end);
   }
   function showForm(){
     planEl.hidden = true; planEl.innerHTML = ''; form.hidden = false; hint.hidden = true;
@@ -718,15 +832,21 @@ body{background:#EEF4FB;color:#1e293b;font-family:var(--f);-webkit-font-smoothin
     var first = daysEl.querySelector('[aria-checked="true"]'); if (first) first.focus({preventScroll: true});
   }
   function planText(p){
-    var out = [p.title, p.summary.charAt(0).toUpperCase() + p.summary.slice(1), 'Best time: ' + p.bestTime, ''];
+    var out = [p.title, p.summary];
+    if (p.missingText) out.push(p.missingText);
+    out.push('Best time: ' + p.bestTime, '');
+    function line(s){ out.push('• ' + s.place + ' (' + s.category + ', ' + hrs(s.hours) + ')'); }
     p.days.forEach(function(d){
-      out.push('Day ' + d.n + ': ' + d.theme);
-      d.stops.forEach(function(s){ out.push('• ' + s.place + ' (' + s.category + ', ' + hrs(s.hours) + ')'); });
-      out.push(d.night ? 'Night stay: ' + d.night + ' — rooms arranged on request' : 'Drop back at ' + p.start.label);
+      out.push('Day ' + d.day + ': ' + d.theme);
+      if (d.driveText) out.push(d.driveText);
+      d.stops.filter(function(s){ return !s.filler; }).forEach(line);
+      var extra = d.stops.filter(function(s){ return s.filler; });
+      if (extra.length){ out.push('Also nearby:'); extra.forEach(line); }
+      out.push(d.night ? 'Night stay: ' + d.night + ' — rooms arranged on request' : d.end);
       out.push('Local food: ' + d.food, '');
     });
     out.push('Vehicle: ' + p.vehicle + ' for ' + p.people + (p.people > 1 ? ' people' : ' person'));
-    out.push('Tips: ' + p.tips.join(' '));
+    out.push('Tips: ' + TIPS.join(' '));
     out.push('GR Tours & Travels · WhatsApp 96209 36143 · Price on WhatsApp');
     return out.join('\n');
   }
